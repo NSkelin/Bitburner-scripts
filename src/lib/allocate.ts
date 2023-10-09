@@ -52,6 +52,7 @@ async function getUsableServers(
   return {usableServers, totalAvailableRam};
 }
 
+/** Runs the allocated scripts onto their allocated servers and returns the scripts pid and the server its running on, or null if it failed to allocated any scripts. */
 async function allocate(ns: NS, allocation: Map<string, Script[]>) {
   if (allocation.size > 0) {
     const executedServers: {server: string; pid: number}[] = [];
