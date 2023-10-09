@@ -1,6 +1,6 @@
 import {NS} from "@ns";
-import type {forEachServerOptions} from "./lib/helpers";
-import {executeMaxThreads, forEachServer} from "./lib/helpers";
+import type {forEachServerOptions} from "../lib/helpers";
+import {executeMaxThreads, forEachServer} from "../lib/helpers";
 
 /** Runs the hacking script on the host with the maximum threads it can handle. Also includes some extra information for the hacking script as args. */
 function startHack(ns: NS, script: string, host: string, target: string) {

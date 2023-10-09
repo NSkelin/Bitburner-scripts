@@ -1,6 +1,6 @@
 import {NS} from "@ns";
-import {allocateScripts} from "./lib/allocate";
-import {forEachServer} from "./lib/helpers";
+import {allocateScripts} from "../lib/allocate";
+import {forEachServer} from "../lib/helpers";
 
 /** Calculates the growth multiplier needed to return the amount of money taken from the server.
  * @param targetMoney - The money the target server has.
