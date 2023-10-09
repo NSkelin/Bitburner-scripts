@@ -66,7 +66,7 @@ async function growMoneyToMaximum(ns: NS, server: string) {
 async function primeServer(ns: NS, server: string) {
   if (serverPrimed(ns, server)) return; // servers ready to go so theres nothing to do
 
-  await allocateScripts(ns, [{script: "primeServer.js", threads: 1, args: [server]}], {
+  await allocateScripts(ns, [{script: "hackServer.js", threads: 1, args: [server]}], {
     serverOptions: {includeHomeServer: true, includePurchasedServers: false, UnownedServers: {include: false}},
   });
 }
