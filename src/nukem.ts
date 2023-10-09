@@ -4,7 +4,7 @@ import {forEachServer} from "./lib/helpers";
 /** Finds all the port opening executables available on the home server. */
 function findPortHackExecutables(ns: NS) {
   // The names for all port opening executables.
-  const portHackExecutables = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject"];
+  const portHackExecutables = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
 
   const foundExecutables = [];
   for (const exe of portHackExecutables) {
