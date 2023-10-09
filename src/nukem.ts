@@ -1,25 +1,26 @@
 import {NS} from "@ns";
 import {forEachServer} from "./lib/helpers";
-// list of the file names for port opening programs.
-const portOpenerFiles = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject"];
 
-/** Searchs the home server for all owned port opening executable files. */
-function getOwnedPortOpenerFiles(ns: NS) {
-  const filesOwned = [];
-  for (const file of portOpenerFiles) {
-    if (ns.fileExists(file, "home")) {
-      filesOwned.push(file);
+/** Finds all the port opening executables available on the home server. */
+function findPortHackExecutables(ns: NS) {
+  // The names for all port opening executables.
+  const portHackExecutables = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject"];
+
+  const foundExecutables = [];
+  for (const exe of portHackExecutables) {
+    if (ns.fileExists(exe, "home")) {
+      foundExecutables.push(exe);
     }
   }
-  return filesOwned;
+  return foundExecutables;
 }
 
-/** Opens a port on the server using one of the programs in the portOpenerFiles array.
- * @param {string} server Name of the server.
- * @param {string} program A string matching one of the items in the portOpenerFiles array.
+/** Runs the matching executable on the given server to open its port.
+ * @param {string} server Name of the server to open the port on.
+ * @param {string} executable The filename for the executable to be run. Must be an executable that opens a port.
  */
-function openPort(ns: NS, server: string, program: string) {
-  switch (program) {
+function openPort(ns: NS, server: string, executable: string) {
+  switch (executable) {
     case "BruteSSH.exe":
       ns.brutessh(server);
       break;
@@ -38,30 +39,38 @@ function openPort(ns: NS, server: string, program: string) {
   }
 }
 
-function openPorts(ns: NS, server: string, portOpeners: string[]) {
+/** Attempts to gain root access on the given server.
+ *
+ * Checks if the player has enough port opening executables unlocked to gain root access on the given server. */
+function gainRootAccess(ns: NS, server: string, availableExecutables: string[]) {
   if (ns.hasRootAccess(server)) return;
+
   const portsToOpen = ns.getServerNumPortsRequired(server);
 
-  if (portsToOpen <= portOpeners.length) {
-    for (let i = 0; i < portsToOpen; i++) {
-      openPort(ns, server, portOpeners[i]);
-    }
-    ns.nuke(server);
-    ns.tprint(`Root access gained on: ${server}`);
+  // Does the player have enough programs to open the required amount of ports?
+  if (portsToOpen <= availableExecutables.length) return;
+
+  // Open the ports.
+  for (let i = 0; i < portsToOpen; i++) {
+    openPort(ns, server, availableExecutables[i]);
   }
+
+  // Gain root access.
+  ns.nuke(server);
+  ns.tprint(`Root access gained on: ${server}`);
 }
 
-/** Attempts to gain root access to all servers at a given depth. */
+/** Attempts to gain root access to all servers at a specified amount of hops away from the home server. */
 export async function main(ns: NS) {
-  const depth = 10;
-  const portOpeners = getOwnedPortOpenerFiles(ns);
+  const hops = 10;
+  const availableExecutables = findPortHackExecutables(ns);
 
-  const callback = (ns: NS, serverName: string) => openPorts(ns, serverName, portOpeners);
+  const callback = (ns: NS, serverName: string) => gainRootAccess(ns, serverName, availableExecutables);
 
   await forEachServer(ns, callback, {
     includeHomeServer: false,
     includePurchasedServers: false,
-    UnownedServers: {include: true, hops: depth},
+    UnownedServers: {include: true, hops: hops},
     rootAccessOnly: false,
   });
 }
