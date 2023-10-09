@@ -1,5 +1,5 @@
 import {NS} from "@ns";
-import {forEachServer, forEachServerOptions, getAvailableRam} from "lib/helpers";
+import {forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
 import {createMutex} from "lib/mutex";
 
 interface Script {
@@ -37,7 +37,7 @@ async function getUsableServers(
   let totalAvailableRam = 0;
 
   const callBack = (ns: NS, serverName: string) => {
-    const serverFreeRam = getAvailableRam(ns, serverName);
+    const serverFreeRam = getServerFreeRam(ns, serverName);
 
     // Dont add servers that cannot even run the smallest script whole, while thread splitting is disabled.
     if (allowThreadSplitting === false && serverFreeRam < smallestScriptRamCost) return;
@@ -111,7 +111,7 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
   // if all the servers combined cant run all the scripts, return
   if (allOrNothing && totalAvailableRam < totalRequiredRam) return null;
   // sort servers by smallest ram first so i can fill up empty spaces before using another server
-  usableServers.sort((serverA, serverB) => getAvailableRam(ns, serverA.name) - getAvailableRam(ns, serverB.name));
+  usableServers.sort((serverA, serverB) => getServerFreeRam(ns, serverA.name) - getServerFreeRam(ns, serverB.name));
 
   const allocation: Map<string, Script[]> = new Map();
 

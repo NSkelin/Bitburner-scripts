@@ -92,7 +92,7 @@ export function executeMaxThreads(ns: NS, script: string, host: string, args: (s
   }
 }
 
-/** Returns the free ram available for use on the server. */
-export function getAvailableRam(ns: NS, serverName: string) {
+/** Gets the free RAM available for use a server. */
+export function getServerFreeRam(ns: NS, serverName: string) {
   return ns.getServerMaxRam(serverName) * 1000 - ns.getServerUsedRam(serverName) * 1000;
 }
