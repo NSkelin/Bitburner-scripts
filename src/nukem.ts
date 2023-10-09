@@ -53,7 +53,7 @@ function openPorts(ns: NS, server: string, portOpeners: string[]) {
 
 /** Attempts to gain root access to all servers at a given depth. */
 export async function main(ns: NS) {
-  const depth = 5;
+  const depth = 10;
   const portOpeners = getOwnedPortOpenerFiles(ns);
 
   const callback = (ns: NS, serverName: string) => openPorts(ns, serverName, portOpeners);
