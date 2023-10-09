@@ -1,7 +1,6 @@
 import {NS} from "@ns";
 import {allocateScripts} from "./lib/allocate";
-import {serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
-import {getOptimalHackingThreads} from "./proHackem";
+import {getOptimalHackingThreads, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
 /** Lowers a servers security to its minimum level possible.
  *
  * Runs a script on the server to lower its security to the minimum value possible, then stops the script and returns.
@@ -67,6 +66,28 @@ async function growMoneyToMaximum(ns: NS, server: string) {
   return;
 }
 
+async function hackTarget(ns: NS, target: string) {
+  const {hackThreads, growthThreads, weakenThreads} = getOptimalHackingThreads(ns, target, 0.1);
+  if (hackThreads === 0 || growthThreads === 0 || weakenThreads === 0) return;
+  const scripts = [
+    {script: "minHacker.js", threads: hackThreads, args: [target]},
+    {script: "minGrower.js", threads: growthThreads, args: [target]},
+    {script: "minWeakener.js", threads: weakenThreads, args: [target]},
+  ];
+
+  await allocateScripts(ns, scripts, {
+    serverOptions: {
+      includeHomeServer: true,
+      includePurchasedServers: true,
+      UnownedServers: {
+        include: false,
+      },
+    },
+    executeOptions: {allOrNothing: true, sameServer: true},
+  });
+  return;
+}
+
 /** This function will prime a server for hacking by lowering its security to the minimum and
  * growing its available money to the maximum. */
 async function primeServer(ns: NS, server: string) {
@@ -75,6 +96,7 @@ async function primeServer(ns: NS, server: string) {
   await weakenSecurityToMinimum(ns, server);
   await growMoneyToMaximum(ns, server);
   await weakenSecurityToMinimum(ns, server); // redo to ensure security is minimum.
+  await hackTarget(ns, server);
 }
 
 /** An incredibly cheap server security lower meant to be controlled by another script. */

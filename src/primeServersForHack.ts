@@ -1,8 +1,7 @@
 import {NS} from "@ns";
 import {allocateScripts} from "./lib/allocate";
-import {serverMoneyAtMax, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
+import {getOptimalHackingThreads, serverMoneyAtMax, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
 import {forEachServer} from "./lib/helpers";
-import {getOptimalHackingThreads} from "./proHackem";
 
 /** Lowers a servers security to its minimum level possible.
  *

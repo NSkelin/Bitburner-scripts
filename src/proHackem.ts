@@ -55,7 +55,7 @@ function balanceProcessingThreads(process1Time: number, process2Time: number, pr
  * While calculating the execution time for each process it assumes the servers security level is the current security level,
  * not the security level after each step (hack, grow).
  */
-export function getOptimalHackingThreads(ns: NS, target: string, profitRatio = 0.1) {
+function getOptimalHackingThreads(ns: NS, target: string, profitRatio = 0.1) {
   const targetMaxMoney = ns.getServerMaxMoney(target);
   // CSEC has 0 max funds meaning they cannot be hacked.
   if (targetMaxMoney === 0) return {hackThreads: 0, growthThreads: 0, weakenThreads: 0};
