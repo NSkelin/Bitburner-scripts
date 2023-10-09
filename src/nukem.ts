@@ -48,7 +48,7 @@ function gainRootAccess(ns: NS, server: string, availableExecutables: string[]) 
   const portsToOpen = ns.getServerNumPortsRequired(server);
 
   // Does the player have enough programs to open the required amount of ports?
-  if (portsToOpen <= availableExecutables.length) return;
+  if (availableExecutables.length <= portsToOpen) return;
 
   // Open the ports.
   for (let i = 0; i < portsToOpen; i++) {
