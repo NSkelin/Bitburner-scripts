@@ -24,6 +24,7 @@ function sortData(ns: NS, data: string[][], sortBy: string) {
   data.sort((a, b) => Number(b[option]) - Number(a[option]));
 }
 
+/** Gathers useful infiltration data and displays it in a table. */
 export async function main(ns: NS) {
   const locals = ns.infiltration.getPossibleLocations();
   const arr = [["difficulty", "city", "company", "tradeRep gain", "SoARep gain"]];
