@@ -1,5 +1,5 @@
 import {NS} from "@ns";
-import {printTable} from "./lib/logger";
+import {tprintTable} from "./lib/logger";
 
 /** Sorts the infiltration data by a specific column in descending order.
  *
@@ -44,5 +44,5 @@ export async function main(ns: NS) {
   if (typeof sortBy !== "string") sortBy = "soarep";
   sortData(ns, arr, sortBy);
 
-  printTable(ns, arr, true);
+  tprintTable(ns, arr, true);
 }
