@@ -186,9 +186,14 @@ export function createTable(rowsColumns: string[][], firstRowHeaders = true) {
   return topSection + rows + bottomCap;
 }
 
-/** Prints the result of createTable(). */
+/** Prints the result of createTable() to the scripts logs. */
 export function printTable(ns: NS, rowsColumns: string[][], firstRowHeaders = true) {
   ns.print(createTable(rowsColumns, firstRowHeaders));
+}
+
+/** Prints the result of createTable() to the terminal. */
+export function tprintTable(ns: NS, rowsColumns: string[][], firstRowHeaders = true) {
+  ns.tprint("\n" + createTable(rowsColumns, firstRowHeaders));
 }
 
 /** A function to test the table creates and formats correctly. */
