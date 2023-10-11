@@ -16,9 +16,9 @@ export async function main(ns: NS) {
     arr.push([diff, city, company, tradeRep, SoARep]);
   }
 
-  // arr.sort((a, b) => a.diff - b.diff);
-  // arr.sort((a, b) => a.tradeRep - b.tradeRep);
-  arr.sort((a, b) => Number(a[4]) - Number(b[4]));
+  // arr.sort((a, b) => b.diff - a.diff);
+  // arr.sort((a, b) => b.tradeRep - a.tradeRep);
+  arr.sort((a, b) => Number(b[4]) - Number(a[4]));
 
   printTable(ns, arr, true);
 }
