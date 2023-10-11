@@ -21,6 +21,21 @@ import {NS} from "@ns";
  * ┴  - Bottom tee
  */
 
+/** A 2 dimensional array representing a tables rows and columns, with the outer array holding the tables rows and the inner array's holding that rows columns.
+ * Each inner array represents a single row, with the values being the data for that column.
+ * The outer array holds all the rows.
+ *
+ * @example
+ * // A representation of the table data.
+ * [
+ *  [ c1, c2, c3, c4 ], // row 1
+ *  [ c1, c2, c3, c4 ], // row 2
+ *  [ c1, c2, c3, c4 ], // row 3
+ *  [ c1, c2, c3, c4 ], // row 4
+ * ]
+ */
+type TableData = string[][];
+
 /** Combines a columns data with its length into an array, with arr[0] being the data and arr[1] being the length [string, number].
  *
  * The column data and column lengths should use matching indexes to line up properly.
@@ -106,7 +121,7 @@ function createRow(columns: [string, number][]) {
  * │ column 1 │ column 2 │ column 3   |...
  * │ column 1 │ column 2 │ column 3   |...
  */
-function createRows(data: string[][], columnWidths: number[]) {
+function createRows(data: TableData, columnWidths: number[]) {
   let rows = "";
   for (const rowData of data) {
     const rowFormat = createRowFormat(rowData, columnWidths);
@@ -145,7 +160,7 @@ function createHeaders(headers: string[], columnWidths: number[]) {
  * @param rowsColumns A 2 dimensional array representing a tables row and columns, with the outer array being the rows and the inner array being the columns.
  * @returns The width for each column matching that columns longest piece of data.
  */
-function getColumnWidths(rowsColumns: string[][]) {
+function getColumnWidths(rowsColumns: TableData) {
   const columnWidths: number[] = [...Array(rowsColumns[0].length)].map(() => 0);
   for (const row of rowsColumns) {
     for (const [i, column] of row.entries()) {
@@ -168,7 +183,7 @@ function getColumnWidths(rowsColumns: string[][]) {
  * │ column 1 │ column 2 │
  * └──────────┴──────────┘
  */
-export function createTable(rowsColumns: string[][], firstRowHeaders = true) {
+export function createTable(rowsColumns: TableData, firstRowHeaders = true) {
   const columnWidths = getColumnWidths(rowsColumns);
 
   // Create either the table headers, or the border cap if there are no headers.
@@ -187,12 +202,12 @@ export function createTable(rowsColumns: string[][], firstRowHeaders = true) {
 }
 
 /** Prints the result of createTable() to the scripts logs. */
-export function printTable(ns: NS, rowsColumns: string[][], firstRowHeaders = true) {
+export function printTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true) {
   ns.print(createTable(rowsColumns, firstRowHeaders));
 }
 
 /** Prints the result of createTable() to the terminal. */
-export function tprintTable(ns: NS, rowsColumns: string[][], firstRowHeaders = true) {
+export function tprintTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true) {
   ns.tprint("\n" + createTable(rowsColumns, firstRowHeaders));
 }
 
