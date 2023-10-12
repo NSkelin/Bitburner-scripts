@@ -86,6 +86,8 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
  * each column has a 1 space padding on both sides.
  * @param columnData The data or text that will be shown in each column.
  * @param columnWidths The widths used to decide the columns widths.
+ * @param padding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
+ * The padding is in addition to the column width and goes between the column border (|) and the column data on both sides.
  * @example
  * const columns = ["column1", "column2", "column3"];
  * const widths = [10, 3];
