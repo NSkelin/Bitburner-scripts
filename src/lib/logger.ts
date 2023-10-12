@@ -36,23 +36,6 @@ import {NS} from "@ns";
  */
 type TableData = string[][];
 
-/** Combines a columns data with its length into an array, with arr[0] being the data and arr[1] being the length [string, number].
- *
- * The column data and column lengths should use matching indexes to line up properly.
- * For example, columnLength[0] is the length for columnData[0].
- *
- * @param columnData
- * @param columnLengths
- * @returns The formatted data array.
- */
-function createRowFormat(columnData: string[], columnLengths: number[]) {
-  if (columnLengths.length !== columnData.length) {
-    throw new Error("Arrays must have the same length");
-  }
-
-  return columnData.map<[string, number]>((value, index) => [value, columnLengths[index]]);
-}
-
 type SideTypes = "t" | "top" | "b" | "bot" | "bottom";
 type Side<T extends string> = Lowercase<T> extends SideTypes ? T : SideTypes;
 /** Creates the start or end cap of a border box.
@@ -97,15 +80,28 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
 }
 
 /** Creates a formatted string representing a single table row.
- * @param columns A 2 dimensional array with the outer array being the row's columns and the inner array being that column's data and length.
- * @returns The row: │ column 1      │ column 2 │ column 3            |...
+ *
+ * The width used for each column is the matching index of the columnWidths array. So data[0] uses the width from widths[0], data[3] -> widths[3].
+ * If the widths index is invalid or the width is less than the datas length, the width will default to the length of the data. Additionally
+ * each column has a 1 space padding on both sides.
+ * @param columnData The data or text that will be shown in each column.
+ * @param columnWidths The widths used to decide the columns widths.
+ * @example
+ * const columns = ["column1", "column2", "column3"];
+ * const widths = [10, 3];
+ * createRow(columns, widths);
+ * // Returns
+ * "│ column 1   │ column 2 │ column 3 |""
  */
-function createRow(columns: [string, number][]) {
+function createRow(columnData: string[], columnWidths: number[]) {
   let row = "│";
 
-  for (const column of columns) {
-    row += ` ${column[0].padEnd(column[1], " ")} │`;
+  for (let i = 0; i < columnData.length; i++) {
+    const data = columnData[i];
+    const width = columnWidths[i] ?? 0;
+    row += data.padEnd(width, " ") + " |";
   }
+
   return row + "\n";
 }
 
@@ -123,9 +119,8 @@ function createRow(columns: [string, number][]) {
  */
 function createRows(data: TableData, columnWidths: number[]) {
   let rows = "";
-  for (const rowData of data) {
-    const rowFormat = createRowFormat(rowData, columnWidths);
-    const row = createRow(rowFormat);
+  for (const columnData of data) {
+    const row = createRow(columnData, columnWidths);
     rows += row;
   }
   return rows;
@@ -146,10 +141,8 @@ function createRows(data: TableData, columnWidths: number[]) {
  * └──────────┴──────────┘
  */
 function createHeaders(headers: string[], columnWidths: number[]) {
-  const rowFormat = createRowFormat(headers, columnWidths);
-
   const row1 = createBorderCap(columnWidths, "top");
-  const row2 = createRow(rowFormat);
+  const row2 = createRow(headers, columnWidths);
   const row3 = createBorderCap(columnWidths);
 
   return row1 + row2 + row3;
