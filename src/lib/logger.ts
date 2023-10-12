@@ -144,7 +144,7 @@ function createRows(data: TableData, columnWidths: number[], padding?: [number, 
  * @param columnWidths The length for each header column.
  * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
  * @example
- * createHeaders(ns, ["Header 1", "Header 2"], [8, 8]);
+ * createHeaders(["Header 1", "Header 2"], [8, 8]);
  * // will return
  * ┌──────────┬──────────┐
  * │ Header 1 │ Header 2 │
