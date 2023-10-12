@@ -99,7 +99,7 @@ function createRow(columnData: string[], columnWidths: number[]) {
   for (let i = 0; i < columnData.length; i++) {
     const data = columnData[i];
     const width = columnWidths[i] ?? 0;
-    row += data.padEnd(width, " ") + " |";
+    row += " " + data.padEnd(width, " ") + " |";
   }
 
   return row + "\n";
