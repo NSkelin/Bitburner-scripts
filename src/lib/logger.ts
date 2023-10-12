@@ -93,13 +93,15 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
  * // Returns
  * "│ column 1   │ column 2 │ column 3 |""
  */
-function createRow(columnData: string[], columnWidths: number[]) {
+function createRow(columnData: string[], columnWidths: number[], padding: [number, number] = [1, 1]) {
+  const leftPad = " ".repeat(padding[0]);
+  const rightPad = " ".repeat(padding[1]);
   let row = "│";
 
   for (let i = 0; i < columnData.length; i++) {
     const data = columnData[i];
     const width = columnWidths[i] ?? 0;
-    row += " " + data.padEnd(width, " ") + " |";
+    row += leftPad + data.padEnd(width, " ") + rightPad + "|";
   }
 
   return row + "\n";
