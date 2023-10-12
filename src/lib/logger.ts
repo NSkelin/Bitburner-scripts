@@ -42,9 +42,11 @@ type Side<T extends string> = Lowercase<T> extends SideTypes ? T : SideTypes;
  *
  * @param columnWidths Determines how long the cap is. If there are multiple values, a separator will be placed between each column.
  * @param side The side of the border that will be capped, TOP or Bottom.
+ * @param padding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
+ * The padding is in addition to the column width and goes between the column border and the column width on both sides.
  * @returns The completed border cap: └───────┘ / └───────┴───────┘ / ┌───────┐ /...
  */
-function createBorderCap<T extends string>(columnWidths: number[], side: Side<T> = "bottom") {
+function createBorderCap<T extends string>(columnWidths: number[], side: Side<T> = "bottom", padding: [number, number] = [1, 1]) {
   const sideMapKey = side.toLowerCase();
   const sideMap = {
     b: ["└", "┴", "┘"],
@@ -57,23 +59,25 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
   if (Object.keys(sideMap).includes(sideMapKey) === false) throw new Error("Parameter side is an invalid key: " + sideMapKey);
 
   const [lCap, mCap, rCap] = sideMap[sideMapKey as SideTypes];
+  const leftPad = "─".repeat(padding[0]);
+  const rightPad = "─".repeat(padding[1]);
 
   // Create the capRow
   // └─
-  let row = lCap + "─";
+  let row = lCap + leftPad;
 
-  for (const [i, length] of columnWidths.entries()) {
+  for (const [i, columnWidth] of columnWidths.entries()) {
     // └─ + ───── = └──────
-    row += "─".repeat(length);
+    row += "─".repeat(columnWidth);
 
     if (i < columnWidths.length - 1) {
       // └────── + ─┴─ = └───────┴─
-      row += `─${mCap}─`;
+      row += `${rightPad}${mCap}${leftPad}`;
     }
   }
 
   // └────── + ─┘ = └───────┘
-  row += "─" + rCap;
+  row += rightPad + rCap;
 
   // └───────┴───────┘
   return row + "\n";
@@ -116,15 +120,16 @@ function createRow(columnData: string[], columnWidths: number[], padding: [numbe
  *
  * @param data A 2 dimensional array of rows and columns with the outer array being rows and the inner array being that row's columns.
  * @param columnWidths The lengths for each column.
+ * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
  * @example
  * │ column 1 │ column 2 │ column 3   |...
  * │ column 1 │ column 2 │ column 3   |...
  * │ column 1 │ column 2 │ column 3   |...
  */
-function createRows(data: TableData, columnWidths: number[]) {
+function createRows(data: TableData, columnWidths: number[], padding?: [number, number]) {
   let rows = "";
   for (const columnData of data) {
-    const row = createRow(columnData, columnWidths);
+    const row = createRow(columnData, columnWidths, padding);
     rows += row;
   }
   return rows;
@@ -137,6 +142,7 @@ function createRows(data: TableData, columnWidths: number[]) {
  *
  * @param headers The titles for each header.
  * @param columnWidths The length for each header column.
+ * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
  * @example
  * createHeaders(ns, ["Header 1", "Header 2"], [8, 8]);
  * // will return
@@ -144,10 +150,10 @@ function createRows(data: TableData, columnWidths: number[]) {
  * │ Header 1 │ Header 2 │
  * └──────────┴──────────┘
  */
-function createHeaders(headers: string[], columnWidths: number[]) {
-  const row1 = createBorderCap(columnWidths, "top");
-  const row2 = createRow(headers, columnWidths);
-  const row3 = createBorderCap(columnWidths);
+function createHeaders(headers: string[], columnWidths: number[], padding?: [number, number]) {
+  const row1 = createBorderCap(columnWidths, "top", padding);
+  const row2 = createRow(headers, columnWidths, padding);
+  const row3 = createBorderCap(columnWidths, "bot", padding);
 
   return row1 + row2 + row3;
 }
@@ -171,6 +177,7 @@ function getColumnWidths(rowsColumns: TableData) {
  *
  * @param rowsColumns A 2 dimensional array of rows and columns with the outer array being rows and the inner array being that row's columns.
  * @param firstRowHeaders If true, uses the first row in the array as the table headers. Otherwise it creates a table without headers.
+ * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
  * @example
  * ┌──────────┬──────────┐
  * │ Header 1 │ Header 2 │
@@ -180,32 +187,32 @@ function getColumnWidths(rowsColumns: TableData) {
  * │ column 1 │ column 2 │
  * └──────────┴──────────┘
  */
-export function createTable(rowsColumns: TableData, firstRowHeaders = true) {
+export function createTable(rowsColumns: TableData, firstRowHeaders = true, padding?: [number, number]) {
   const columnWidths = getColumnWidths(rowsColumns);
 
   // Create either the table headers, or the border cap if there are no headers.
   let topSection = "";
   if (firstRowHeaders) {
     const headers = rowsColumns.shift() as string[];
-    topSection += createHeaders(headers, columnWidths);
+    topSection += createHeaders(headers, columnWidths, padding);
   } else {
-    topSection += createBorderCap(columnWidths, "Top");
+    topSection += createBorderCap(columnWidths, "Top", padding);
   }
 
-  const rows = createRows(rowsColumns, columnWidths);
-  const bottomCap = createBorderCap(columnWidths);
+  const rows = createRows(rowsColumns, columnWidths, padding);
+  const bottomCap = createBorderCap(columnWidths, "bot", padding);
 
   return topSection + rows + bottomCap;
 }
 
 /** Prints the result of createTable() to the scripts logs. */
-export function printTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true) {
-  ns.print(createTable(rowsColumns, firstRowHeaders));
+export function printTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true, padding?: [number, number]) {
+  ns.print(createTable(rowsColumns, firstRowHeaders, padding));
 }
 
 /** Prints the result of createTable() to the terminal. */
-export function tprintTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true) {
-  ns.tprint("\n" + createTable(rowsColumns, firstRowHeaders));
+export function tprintTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true, padding?: [number, number]) {
+  ns.tprint("\n" + createTable(rowsColumns, firstRowHeaders, padding));
 }
 
 /** A function to test the table creates and formats correctly. */
