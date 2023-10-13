@@ -42,11 +42,17 @@ type Side<T extends string> = Lowercase<T> extends SideTypes ? T : SideTypes;
  *
  * @param columnWidths Determines how long the cap is. If there are multiple values, a separator will be placed between each column.
  * @param side The side of the border that will be capped, TOP or Bottom.
- * @param padding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
+ * @param columnPadding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
  * The padding is in addition to the column width and goes between the column border and the column width on both sides.
+ * @param borderPadding A 2 index array that controls each rows padding. See createRow() for more detail.
  * @returns The completed border cap: └───────┘ / └───────┴───────┘ / ┌───────┐ /...
  */
-function createBorderCap<T extends string>(columnWidths: number[], side: Side<T> = "bottom", padding: [number, number] = [1, 1]) {
+function createBorderCap<T extends string>(
+  columnWidths: number[],
+  side: Side<T> = "bottom",
+  columnPadding: [number, number] = [1, 1],
+  borderPadding: [number, number] = [0, 0]
+) {
   const sideMapKey = side.toLowerCase();
   const sideMap = {
     b: ["└", "┴", "┘"],
@@ -59,12 +65,14 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
   if (Object.keys(sideMap).includes(sideMapKey) === false) throw new Error("Parameter side is an invalid key: " + sideMapKey);
 
   const [lCap, mCap, rCap] = sideMap[sideMapKey as SideTypes];
-  const leftPad = "─".repeat(padding[0]);
-  const rightPad = "─".repeat(padding[1]);
+  const colLeftPad = "─".repeat(columnPadding[0]);
+  const colRightPad = "─".repeat(columnPadding[1]);
+  const borderLeftPad = "─".repeat(borderPadding[0]);
+  const borderRightPad = "─".repeat(borderPadding[1]);
 
   // Create the capRow
   // └─
-  let row = lCap + leftPad;
+  let row = lCap + borderLeftPad + colLeftPad;
 
   for (const [i, columnWidth] of columnWidths.entries()) {
     // └─ + ───── = └──────
@@ -72,12 +80,12 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
 
     if (i < columnWidths.length - 1) {
       // └────── + ─┴─ = └───────┴─
-      row += `${rightPad}${mCap}${leftPad}`;
+      row += `${colRightPad}${mCap}${colLeftPad}`;
     }
   }
 
   // └────── + ─┘ = └───────┘
-  row += rightPad + rCap;
+  row += colRightPad + borderRightPad + rCap;
 
   // └───────┴───────┘
   return row + "\n";
@@ -90,8 +98,10 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
  * each column has a 1 space padding on both sides.
  * @param columnData The data or text that will be shown in each column.
  * @param columnWidths The widths used to decide the columns widths.
- * @param padding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
+ * @param columnPadding A 2 index array that controls the padding for each column with index 0 for the left padding and index 1 for the right padding.
  * The padding is in addition to the column width and goes between the column border (|) and the column data on both sides.
+ * @param borderPadding A 2 index array that controls the padding for each end of the row with index 0 for the left padding and index 1 for the right padding.
+ * The padding goes inside the border (| pad pad columnPad data columnPad pad pad |)
  * @example
  * const columns = ["column1", "column2", "column3"];
  * const widths = [10, 3];
@@ -99,16 +109,22 @@ function createBorderCap<T extends string>(columnWidths: number[], side: Side<T>
  * // Returns
  * "│ column 1   │ column 2 │ column 3 |""
  */
-function createRow(columnData: string[], columnWidths: number[], padding: [number, number] = [1, 1]) {
-  const leftPad = " ".repeat(padding[0]);
-  const rightPad = " ".repeat(padding[1]);
-  let row = "│";
+function createRow(columnData: string[], columnWidths: number[], columnPadding: [number, number] = [1, 1], borderPadding: [number, number] = [0, 0]) {
+  const colLeftPad = " ".repeat(columnPadding[0]);
+  const colRightPad = " ".repeat(columnPadding[1]);
+  const borderLeftPad = " ".repeat(borderPadding[0]);
+  const borderRightPad = " ".repeat(borderPadding[1]);
+
+  let row = "│" + borderLeftPad;
 
   for (let i = 0; i < columnData.length; i++) {
     const data = columnData[i];
     const width = columnWidths[i] ?? 0;
-    row += leftPad + data.padEnd(width, " ") + rightPad + "|";
+    row += colLeftPad + data.padEnd(width, " ") + colRightPad + "|";
   }
+
+  // insert padding before the last row border "|"
+  row = row.slice(0, -3) + borderRightPad + row.slice(-3);
 
   return row + "\n";
 }
@@ -120,16 +136,17 @@ function createRow(columnData: string[], columnWidths: number[], padding: [numbe
  *
  * @param data A 2 dimensional array of rows and columns with the outer array being rows and the inner array being that row's columns.
  * @param columnWidths The lengths for each column.
- * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
+ * @param columnPadding A 2 index array that controls each columns padding. See createRow() for more detail.
+ * @param borderPadding A 2 index array that controls each rows padding. See createRow() for more detail.
  * @example
  * │ column 1 │ column 2 │ column 3   |...
  * │ column 1 │ column 2 │ column 3   |...
  * │ column 1 │ column 2 │ column 3   |...
  */
-function createRows(data: TableData, columnWidths: number[], padding?: [number, number]) {
+function createRows(data: TableData, columnWidths: number[], columnPadding?: [number, number], borderPadding?: [number, number]) {
   let rows = "";
   for (const columnData of data) {
-    const row = createRow(columnData, columnWidths, padding);
+    const row = createRow(columnData, columnWidths, columnPadding, borderPadding);
     rows += row;
   }
   return rows;
@@ -142,7 +159,8 @@ function createRows(data: TableData, columnWidths: number[], padding?: [number, 
  *
  * @param headers The titles for each header.
  * @param columnWidths The length for each header column.
- * @param padding A 2 index array that controls each columns padding. See createRow() for more detail.
+ * @param columnPadding A 2 index array that controls each columns padding. See createRow() for more detail.
+ * @param borderPadding A 2 index array that controls each rows padding. See createRow() for more detail.
  * @example
  * createHeaders(["Header 1", "Header 2"], [8, 8]);
  * // will return
@@ -150,10 +168,10 @@ function createRows(data: TableData, columnWidths: number[], padding?: [number, 
  * │ Header 1 │ Header 2 │
  * └──────────┴──────────┘
  */
-function createHeaders(headers: string[], columnWidths: number[], padding?: [number, number]) {
-  const row1 = createBorderCap(columnWidths, "top", padding);
-  const row2 = createRow(headers, columnWidths, padding);
-  const row3 = createBorderCap(columnWidths, "bot", padding);
+function createHeaders(headers: string[], columnWidths: number[], columnPadding?: [number, number], borderPadding?: [number, number]) {
+  const row1 = createBorderCap(columnWidths, "top", columnPadding, borderPadding);
+  const row2 = createRow(headers, columnWidths, columnPadding, borderPadding);
+  const row3 = createBorderCap(columnWidths, "bot", columnPadding, borderPadding);
 
   return row1 + row2 + row3;
 }
