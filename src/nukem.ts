@@ -62,7 +62,6 @@ function gainRootAccess(ns: NS, server: string, availableExecutables: string[]) 
 
 /** Attempts to gain root access to all servers at a specified amount of hops away from the home server. */
 export async function main(ns: NS) {
-  const hops = 10;
   const availableExecutables = findPortHackExecutables(ns);
 
   const callback = (ns: NS, serverName: string) => gainRootAccess(ns, serverName, availableExecutables);
@@ -70,7 +69,7 @@ export async function main(ns: NS) {
   await forEachServer(ns, callback, {
     includeHomeServer: false,
     includePurchasedServers: false,
-    UnownedServers: {include: true, hops: hops},
+    UnownedServers: {include: true, hops: 30},
     rootAccessOnly: false,
   });
 }
