@@ -1,6 +1,19 @@
 import {NS} from "@ns";
-import {allocateScripts} from "./lib/allocate";
+import {AllocateScriptsOptions, allocateScripts} from "./lib/allocate";
 import {getOptimalHackingThreads, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
+
+const allocationOptions: AllocateScriptsOptions = {
+  executeOptions: {
+    allOrNothing: false,
+    allowThreadSplitting: true,
+    sameServer: false,
+  },
+  serverOptions: {
+    includeHomeServer: true,
+    includePurchasedServers: true,
+  },
+};
+
 /** Lowers a servers security to its minimum level possible.
  *
  * Runs a script on the server to lower its security to the minimum value possible, then stops the script and returns.
@@ -15,10 +28,7 @@ async function weakenSecurityToMinimum(ns: NS, server: string) {
     threadCount++;
   }
 
-  const scriptPids = await allocateScripts(ns, [{script: "minWeakener.js", threads: threadCount, args: [server]}], {
-    serverOptions: {includeHomeServer: true},
-    executeOptions: {allowThreadSplitting: true},
-  });
+  const scriptPids = await allocateScripts(ns, [{script: "minWeakener.js", threads: threadCount, args: [server]}], allocationOptions);
 
   if (scriptPids == null || scriptPids.length === 0) {
     ns.tprint(`FAILED TO ALLOCATE minWeakener.js SCRIPT(S) FOR ${server}. THREADS: ${threadCount}`);
@@ -47,7 +57,7 @@ async function growMoneyToMaximum(ns: NS, server: string) {
     {script: "minWeakener.js", threads: weakenThreads, args: [server]},
   ];
 
-  const scriptPids = await allocateScripts(ns, scripts, {serverOptions: {includeHomeServer: true}, executeOptions: {allowThreadSplitting: true}});
+  const scriptPids = await allocateScripts(ns, scripts, allocationOptions);
 
   if (scriptPids == null || scriptPids.length === 0) {
     ns.tprint(`FAILED TO ALLOCATE minWeakener.js & minGrower.js SCRIPT(S) FOR ${server}.`);
@@ -75,16 +85,7 @@ async function hackTarget(ns: NS, target: string) {
     {script: "minWeakener.js", threads: weakenThreads, args: [target]},
   ];
 
-  await allocateScripts(ns, scripts, {
-    serverOptions: {
-      includeHomeServer: true,
-      includePurchasedServers: true,
-      UnownedServers: {
-        include: false,
-      },
-    },
-    executeOptions: {allOrNothing: true, sameServer: true},
-  });
+  await allocateScripts(ns, scripts, allocationOptions);
   return;
 }
 
