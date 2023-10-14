@@ -298,6 +298,23 @@ export function tprintMenu(ns: NS, title: string, subtitle: string, data: TableD
   ns.tprint(createMenu(title, subtitle, data));
 }
 
+/** Creates an ascii progress bar.
+ * @param fillPercent The percentage of the bar that is filled. The percent must be a number from 0 - 100, with 100 being 100%.
+ * @param length The total ascii characters used to make up the progress bar not including the 2 ends.
+ * @example
+ * const bar = createProgressBar(33, 10);
+ * console.log(bar);
+ * // [|||-------]
+ */
+export function createProgressBar(fillPercent: number, length: number = 10) {
+  const fillLength = Math.round((fillPercent / 100) * length);
+
+  const fill = "|".repeat(fillLength);
+  const empty = "-".repeat(length - fillLength);
+
+  return `[${fill}${empty}]`;
+}
+
 /** A function to test the table creates and formats correctly. */
 function testTable(ns: NS) {
   const dummyData = [
