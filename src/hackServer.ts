@@ -1,6 +1,6 @@
 import {NS} from "@ns";
 import {AllocateScriptsOptions, allocateScripts} from "./lib/allocate";
-import {getOptimalHackingThreads, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
+import {getOptimalHackingThreads, serverMoneyAtMax, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
 
 const allocationOptions: AllocateScriptsOptions = {
   executeOptions: {
@@ -65,7 +65,7 @@ async function growMoneyToMaximum(ns: NS, server: string) {
   }
 
   // wait till done
-  while (serverSecurityAtMinimum(ns, server) === false) {
+  while (serverMoneyAtMax(ns, server) === false) {
     await ns.sleep(5000);
   }
 
