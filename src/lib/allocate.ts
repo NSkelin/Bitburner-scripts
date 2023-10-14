@@ -82,7 +82,7 @@ interface ExecuteOptions {
   allowThreadSplitting?: boolean;
 }
 
-interface AllocateScriptsOptions {
+export interface AllocateScriptsOptions {
   /** Options used for controlling where the scripts can be run. */
   serverOptions?: Omit<forEachServerOptions, "rootAccessOnly">;
   executeOptions?: ExecuteOptions;
