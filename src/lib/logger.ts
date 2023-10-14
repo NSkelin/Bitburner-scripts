@@ -223,14 +223,79 @@ export function createTable(rowsColumns: TableData, firstRowHeaders = true, padd
   return topSection + rows + bottomCap;
 }
 
-/** Prints the result of createTable() to the scripts logs. */
+/** Prints the result of {@link createTable} to the scripts logs. */
 export function printTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true, padding?: [number, number]) {
   ns.print(createTable(rowsColumns, firstRowHeaders, padding));
 }
 
-/** Prints the result of createTable() to the terminal. */
+/** Prints the result of {@link createTable} to the terminal. */
 export function tprintTable(ns: NS, rowsColumns: TableData, firstRowHeaders = true, padding?: [number, number]) {
   ns.tprint("\n" + createTable(rowsColumns, firstRowHeaders, padding));
+}
+
+/** Creates a string formatted as a custom menu for displaying data.
+ *
+ * @param subtitle A string that can be any custom message for the menu such as the scripts state.
+ * @param data A 2 dimensional array representing a tables row and columns, with the outer array being the rows and the inner array being the columns.
+ * @example
+ * const data = [
+ *    ["Servers owned", "20/25"],
+ *    ["Server cost", "10.5M / 100.5M"],
+ *    ["", ""],
+ *    ["Current RAM", "1024 GB /2048 GB"],
+ *    ["Ram double cost", "10.5M / 100.5M"],
+ *    ["Servers doubled", "20/25"],
+ *  ];
+ *
+ * const menu = createMenu(ns, "buyServers.js", "Purchasing servers...", data);
+ * ns.print(menu)
+ * // Prints
+ * ┌────────────────────────────────────────────┐
+ * │  buyServers.js                             |
+ * │                                            |
+ * │    Purchasing servers...                   |
+ * │                                            |
+ * │    Servers owned    |  20/25               |
+ * │    Server cost      |  10.5M / 100.5M      |
+ * │                     |                      |
+ * │    Current RAM      |  1024 GB /2048 GB    |
+ * │    Ram double cost  |  10.5M / 100.5M      |
+ * │    Servers doubled  |  20/25               |
+ * └────────────────────────────────────────────┘
+ */
+export function createMenu(title: string, subtitle: string, data: TableData) {
+  // custom settings
+  const borderPadding: [number, number] = [2, 2];
+  const columnPadding: [number, number] = [2, 2];
+
+  const columnWidths = getColumnWidths(data);
+  const columnPaddingWidth = columnPadding.reduce((accumulator, width) => (accumulator += width), 0);
+  const borderPaddingWidth = borderPadding.reduce((accumulator, width) => (accumulator += width), 0);
+  const totalColumnWidth = columnWidths.reduce((accumulator, width) => (accumulator += width + columnPaddingWidth), 0);
+
+  const columnDividers = data[0].length - 1; // column divider ( |col|col|col|col| = 3 dividers 4 walls)
+  const rowWidth = totalColumnWidth + columnDividers - columnPaddingWidth; // remove 1 columnPaddingWidth because each row adds 1
+
+  let row = "";
+  row += createBorderCap([rowWidth], "top", columnPadding, borderPadding);
+  row += createRow([title], [rowWidth + borderPaddingWidth], columnPadding);
+  row += createRow([""], [rowWidth], columnPadding, borderPadding);
+  row += createRow([subtitle], [rowWidth], columnPadding, borderPadding);
+  row += createRow([""], [rowWidth], columnPadding, borderPadding);
+
+  row += createRows(data, columnWidths, columnPadding, borderPadding);
+  row += createBorderCap([rowWidth], "bot", columnPadding, borderPadding);
+  return row;
+}
+
+/** Prints the result of {@link createMenu} to the scripts logs. */
+export function printMenu(ns: NS, title: string, subtitle: string, data: TableData) {
+  ns.print(createMenu(title, subtitle, data));
+}
+
+/** Prints the result of {@link createMenu} to the terminal. */
+export function tprintMenu(ns: NS, title: string, subtitle: string, data: TableData) {
+  ns.tprint(createMenu(title, subtitle, data));
 }
 
 /** A function to test the table creates and formats correctly. */
@@ -246,6 +311,19 @@ function testTable(ns: NS) {
   printTable(ns, dummyData, true);
 }
 
+function testMenu(ns: NS) {
+  const dummyData = [
+    ["Servers owned", "20/25"],
+    ["Server cost", "10.5M / 100.5M"],
+    ["", ""],
+    ["Current RAM", "1024 GB /2048 GB"],
+    ["Ram double cost", "10.5M / 100.5M"],
+    ["Servers doubled", "20/25"],
+  ];
+  printMenu(ns, "buyServers.js", "Purchasing servers...", dummyData);
+}
+
 export async function main(ns: NS) {
   testTable(ns);
+  testMenu(ns);
 }
