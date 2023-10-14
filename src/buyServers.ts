@@ -1,5 +1,6 @@
 import {NS} from "@ns";
 import {canAfford, getInvestmentSize} from "./lib/helpers";
+import {printMenu} from "./lib/logger";
 
 /** A helper function to print useful info into the servers log to help me understand the scripts status. */
 function printPurchaseStatus(ns: NS, cost: number, percent: number) {
@@ -8,13 +9,16 @@ function printPurchaseStatus(ns: NS, cost: number, percent: number) {
   const ownedServers = serverLimit - availableServersToBuy;
   const realCost = getInvestmentSize(cost, percent);
 
-  ns.print("|");
-  ns.print("----------------------------------------");
-  ns.print("Purchasing servers...");
-  ns.print(`Servers purchased: ${ownedServers} / ${serverLimit}`);
-  ns.print(`Next purchase cost: ${ns.formatNumber(cost)} / ${ns.formatNumber(realCost)} (purchase cost / investment size)`);
-  ns.print("----------------------------------------");
-  ns.print("|");
+  const menuData = [
+    ["Servers owned", `${ownedServers} / ${serverLimit}`],
+    ["Server cost", `${ns.formatNumber(cost)} / ${ns.formatNumber(realCost)}`],
+    ["", ""],
+    ["Current RAM", "0 GB / 0 GB"],
+    ["Ram double cost", "0 / 0"],
+    ["Servers doubled", "0 / 0"],
+  ];
+
+  printMenu(ns, "buyServers.js", "Purchasing servers...", menuData);
 }
 
 /** A helper function to print useful info into the servers log to help me understand the scripts status. */
@@ -22,14 +26,16 @@ function printUpgradeStatus(ns: NS, baseRam: number, maxRam: number, server: str
   const upgradeCost = getRamDoubleCost(ns, server);
   const investmentSize = getInvestmentSize(upgradeCost, percent);
 
-  ns.print("|");
-  ns.print("----------------------------------------");
-  ns.print("Upgrading servers...");
-  ns.print(`Current RAM: ${baseRam} / ${maxRam} (Base RAM / Max base RAM)`);
-  ns.print(`Next base ram upgrade cost: ${ns.formatNumber(upgradeCost)} / ${ns.formatNumber(investmentSize)} (upgrade cost / investment size)`);
-  ns.print(`Servers upgraded: ${serverIteration} / ${ns.getPurchasedServers().length}`);
-  ns.print("----------------------------------------");
-  ns.print("|");
+  const menuData = [
+    ["Servers owned", "25/25"],
+    ["Server cost", "NA / NA"],
+    ["", ""],
+    ["Current RAM", `${baseRam} GB / ${maxRam} GB`],
+    ["Ram double cost", `${ns.formatNumber(upgradeCost)} / ${ns.formatNumber(investmentSize)}`],
+    ["Servers doubled", `${serverIteration} / ${ns.getPurchasedServers().length}`],
+  ];
+
+  printMenu(ns, "buyServers.js", "Doubling RAM...", menuData);
 }
 
 /** Returns the number of servers that can still be purchased. */
@@ -103,6 +109,7 @@ async function upgradeAllServers(ns: NS, costPercent: number, maxRam: number) {
 
 /** This script will continuously purchase and upgrade servers until you own the maximum amount possible, each upgraded to the maximum ram possible. */
 export async function main(ns: NS) {
+  ns.disableLog("ALL");
   const newServerHostName = "home-S"; // The base name scheme for new servers. automatically adds digits, ex: home-S-0, home-S-1, etc.
   const newServerRam = 8; // The amount of ram new servers should be purchased with.
   const costPercent = 0.1; // The maximum percent of your total money you are willing to pay to purchase / upgrade servers.
