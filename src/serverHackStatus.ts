@@ -5,7 +5,7 @@ import {createProgressBar, tprintTable} from "./lib/logger";
 /** Prints a table summary of all unowned servers to the terminal. */
 export async function main(ns: NS) {
   const data: string[][] = [];
-  const tableHeaders = ["Server Name", "Money", "Security", "Root access", "Ports", "RAM", "Hack skill"];
+  const tableHeaders = ["Server Name", "Money", "Max Money", "Security", "Root access", "Ports", "RAM", "Hack skill"];
 
   const createRow = (ns: NS, serverName: string) => {
     // server stats.
@@ -22,6 +22,7 @@ export async function main(ns: NS) {
     const row = [
       serverName,
       `${moneyBar}`,
+      `${ns.formatNumber(ns.getServerMaxMoney(serverName))}`,
       `${securityBar}`,
       `${ns.hasRootAccess(serverName)}`,
       `${ns.getServerNumPortsRequired(serverName)}`,
