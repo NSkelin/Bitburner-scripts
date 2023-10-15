@@ -98,3 +98,14 @@ export function executeMaxThreads(ns: NS, script: string, host: string, args: (s
 export function getServerFreeRam(ns: NS, host: string) {
   return ns.getServerMaxRam(host) * 1000 - ns.getServerUsedRam(host) * 1000;
 }
+
+/** Copies all files located under the /lib directory on the "home" server onto the new server.
+ * @param server The server to copy the files to.
+ */
+export function copyLibScripts(ns: NS, server: string) {
+  const libFiles = ns.ls("home", "lib");
+
+  for (const file of libFiles) {
+    ns.scp(file, server);
+  }
+}
