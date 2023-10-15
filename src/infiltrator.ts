@@ -1,28 +1,5 @@
 import {NS} from "@ns";
-import {tprintTable} from "./lib/logger";
-
-/** Sorts the infiltration data by a specific column in descending order.
- *
- * @param data The infiltration data
- * @param sortBy The column to sort by
- */
-function sortData(ns: NS, data: string[][], sortBy: string) {
-  const sortOptions = {
-    difficulty: 0,
-    traderep: 3,
-    soarep: 4,
-  };
-
-  let option: number;
-  if (sortBy === "difficulty" || sortBy === "traderep" || sortBy === "soarep") {
-    option = sortOptions[sortBy];
-  } else {
-    ns.tprint(`${sortBy} is not a valid option, canceling sort.\nValid options:\n${Object.keys(sortOptions)}`);
-  }
-
-  // sort in descending order.
-  data.sort((a, b) => Number(b[option]) - Number(a[option]));
-}
+import {sortTable, tprintTable} from "./lib/logger";
 
 /** Gathers useful infiltration data and displays it in a table. */
 export async function main(ns: NS) {
@@ -40,9 +17,9 @@ export async function main(ns: NS) {
     arr.push([diff, city, company, tradeRep, SoARep]);
   }
 
-  let sortBy = ns.args[0];
-  if (typeof sortBy !== "string") sortBy = "soarep";
-  sortData(ns, arr, sortBy);
+  if (typeof ns.args[0] === "string") {
+    sortTable(ns, arr, ns.args[0]);
+  }
 
   tprintTable(ns, arr, true);
 }

@@ -1,6 +1,6 @@
 import {NS} from "@ns";
 import {forEachServer} from "./lib/helpers";
-import {createProgressBar, tprintTable} from "./lib/logger";
+import {createProgressBar, sortTable, tprintTable} from "./lib/logger";
 
 async function getServerStatus(ns: NS) {
   const status = new Map<string, string>();
@@ -68,8 +68,11 @@ export async function main(ns: NS) {
     UnownedServers: {include: true, hops: 10},
   });
 
-  data.sort((a, b) => (a[0] > b[0] ? 1 : -1));
   data.unshift(tableHeaders);
+
+  if (typeof ns.args[0] === "string") {
+    sortTable(ns, data, ns.args[0]);
+  }
 
   tprintTable(ns, data, true);
 }
