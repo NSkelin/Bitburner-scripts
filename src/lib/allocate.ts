@@ -111,8 +111,6 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
 
   // if all the servers combined cant run all the scripts, return
   if (allOrNothing && totalAvailableRam < totalRequiredRam) return null;
-  // sort servers by smallest ram first so i can fill up empty spaces before using another server
-  usableServers.sort((serverA, serverB) => getServerFreeRam(ns, serverA.name) - getServerFreeRam(ns, serverB.name));
 
   const allocation: Map<string, Script[]> = new Map();
 
