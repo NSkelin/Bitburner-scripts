@@ -1,5 +1,5 @@
 import {NS} from "@ns";
-import {forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
+import {copyLibScripts, forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
 import {createMutex} from "lib/mutex";
 
 interface Script {
@@ -59,6 +59,7 @@ async function allocate(ns: NS, allocation: Map<string, Script[]>) {
 
     // start scripts on their allocated server
     allocation.forEach((scripts, server) => {
+      copyLibScripts(ns, server);
       for (const {script, threads, args = []} of scripts) {
         ns.scp(script, server);
         const pid = ns.exec(script, server, threads, ...args);
