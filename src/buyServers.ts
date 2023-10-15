@@ -113,7 +113,7 @@ export async function main(ns: NS) {
   const newServerHostName = "home-S"; // The base name scheme for new servers. automatically adds digits, ex: home-S-0, home-S-1, etc.
   const newServerRam = 8; // The amount of ram new servers should be purchased with.
   const costPercent = 0.1; // The maximum percent of your total money you are willing to pay to purchase / upgrade servers.
-  const maxRam = 2048; // multiples of 2 only.
+  const maxRam = 16384; // multiples of 2 only.
 
   await purchaseAllServers(ns, newServerHostName, newServerRam, costPercent);
   await upgradeAllServers(ns, costPercent, maxRam);
