@@ -31,9 +31,6 @@ export async function forEachServer(ns: NS, callback: a | b, options?: forEachSe
 
   const purchasedServers = [...ns.getPurchasedServers()];
 
-  // callback with the home server
-  if (includeHomeServer === true) await callback(ns, "home");
-
   if (hops > 0) await descendHopTree("home", hops);
 
   async function descendHopTree(activeServer: string, remainingHops: number, previousServer?: string) {
@@ -59,6 +56,9 @@ export async function forEachServer(ns: NS, callback: a | b, options?: forEachSe
 
     return;
   }
+
+  // callback with the home server
+  if (includeHomeServer === true) await callback(ns, "home");
 }
 
 /** Calculates the total money you require to afford the cost while only spending a portion of your funds. */
