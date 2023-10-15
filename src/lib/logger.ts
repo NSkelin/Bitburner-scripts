@@ -315,6 +315,39 @@ export function createProgressBar(fillPercent: number, length: number = 10) {
   return `[${fill}${empty}]`;
 }
 
+/** Sorts a table by one of its columns.
+ * @param table A 2 dimensional array representing a tables row and columns, with the outer array being the rows and the inner array being the columns.
+ * @param columnHeader The header of the column to sort the table by.
+ */
+export function sortTable(ns: NS, table: TableData, columnHeader?: string) {
+  if (table.length === 0) throw new Error("Table has no data!");
+
+  // remove headers so they dont get sorted.
+  const headers = table.shift();
+
+  if (headers == null || headers.length === 0) throw new Error("Table has no data!");
+
+  columnHeader = columnHeader ?? headers[0];
+
+  const option = headers.indexOf(columnHeader);
+  if (option === -1) {
+    ns.tprint(`Failed to sort table, invalid option: ${columnHeader}. Enter the table header you wish to sort by.`);
+  } else {
+    const columnIsNumber = !isNaN(Number(table[0][option]));
+
+    table.sort((a, b) => {
+      if (columnIsNumber) {
+        return Number(a[option]) - Number(b[option]);
+      } else {
+        return a[option].localeCompare(b[option]);
+      }
+    });
+  }
+
+  // re-add headers to the top of the table.
+  table.unshift(headers);
+}
+
 /** A function to test the table creates and formats correctly. */
 function testTable(ns: NS) {
   const dummyData = [
