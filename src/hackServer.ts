@@ -90,7 +90,7 @@ async function hackTarget(ns: NS, target: string) {
     {script: "minGrower.js", threads: growthThreads, args: [target]},
     {script: "minWeakener.js", threads: weakenThreads, args: [target]},
   ];
-  await allocateScripts(ns, scripts, allocationOptions);
+  await allocateScripts(ns, scripts, {...allocationOptions, executeOptions: {allOrNothing: true}});
 }
 
 /** Primes a server for hacking by lowering its security to the minimum and
