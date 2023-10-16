@@ -30,7 +30,7 @@ function printUpgradeStatus(ns: NS, baseRam: number, maxRam: number, server: str
     ["Servers owned", "25/25"],
     ["Server cost", "NA / NA"],
     ["", ""],
-    ["Current RAM", `${baseRam} GB / ${maxRam} GB`],
+    ["Current RAM", `${ns.formatRam(baseRam)} / ${ns.formatRam(maxRam)}`],
     ["Ram double cost", `${ns.formatNumber(upgradeCost)} / ${ns.formatNumber(investmentSize)}`],
     ["Servers doubled", `${serverIteration} / ${ns.getPurchasedServers().length}`],
   ];
