@@ -92,8 +92,6 @@ async function hackTarget(ns: NS, target: string) {
 /** This function will prime a server for hacking by lowering its security to the minimum and
  * growing its available money to the maximum. */
 async function primeServer(ns: NS, server: string) {
-  if (serverPrimed(ns, server)) return; // servers ready to go so theres nothing to do
-
   await weakenSecurityToMinimum(ns, server);
   await growMoneyToMaximum(ns, server);
   await weakenSecurityToMinimum(ns, server); // redo to ensure security is minimum.
