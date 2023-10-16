@@ -18,6 +18,6 @@ export async function main(ns: NS) {
     includeHomeServer: false,
     includePurchasedServers: false,
     rootAccessOnly: true,
-    UnownedServers: {include: true, hops: 4},
+    UnownedServers: {include: true, hops: 30},
   });
 }
