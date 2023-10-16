@@ -31,7 +31,6 @@ async function weakenSecurityToMinimum(ns: NS, server: string) {
   const scriptPids = await allocateScripts(ns, [{script: "minWeakener.js", threads: threadCount, args: [server]}], allocationOptions);
 
   if (scriptPids == null || scriptPids.length === 0) {
-    ns.tprint(`FAILED TO ALLOCATE minWeakener.js SCRIPT(S) FOR ${server}. THREADS: ${threadCount}`);
     return;
   }
 
@@ -60,7 +59,6 @@ async function growMoneyToMaximum(ns: NS, server: string) {
   const scriptPids = await allocateScripts(ns, scripts, allocationOptions);
 
   if (scriptPids == null || scriptPids.length === 0) {
-    ns.tprint(`FAILED TO ALLOCATE minWeakener.js & minGrower.js SCRIPT(S) FOR ${server}.`);
     return;
   }
 

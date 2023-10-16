@@ -63,9 +63,15 @@ async function allocate(ns: NS, allocation: Map<string, Script[]>) {
       for (const {script, threads, args = []} of scripts) {
         ns.scp(script, server);
         const pid = ns.exec(script, server, threads, ...args);
-        executedServers.push({server, pid});
+
+        if (pid === 0) {
+          ns.tprint(`WARN Failed to allocate script: ${script}, threads: ${threads}`);
+        } else {
+          executedServers.push({server, pid});
+        }
       }
     });
+
     return executedServers;
   } else {
     return null;
