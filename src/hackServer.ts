@@ -1,6 +1,6 @@
 import {NS} from "@ns";
 import {AllocateScriptsOptions, allocateScripts} from "./lib/allocate";
-import {getOptimalHackingThreads, serverMoneyAtMax, serverPrimed, serverSecurityAtMinimum} from "./lib/hackerUtils";
+import {getOptimalHackingThreads, serverMoneyAtMax, serverSecurityAtMinimum} from "./lib/hackerUtils";
 
 const allocationOptions: AllocateScriptsOptions = {
   executeOptions: {
