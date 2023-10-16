@@ -70,8 +70,12 @@ function balanceProcessingThreads(process1Time: number, process2Time: number, pr
  */
 export function getOptimalHackingThreads(ns: NS, target: string, profitRatio = 0.1) {
   const targetMaxMoney = ns.getServerMaxMoney(target);
-  // CSEC has 0 max funds meaning they cannot be hacked.
+
+  // Server cant have money, meaning they cannot be hacked, so exit early.
   if (targetMaxMoney === 0) return {hackThreads: 0, growthThreads: 0, weakenThreads: 0};
+  // Player cannot hack server, so exit early.
+  else if (ns.getServerRequiredHackingLevel(target) > ns.getHackingLevel()) return {hackThreads: 0, growthThreads: 0, weakenThreads: 0};
+
   const hackPercent = ns.hackAnalyze(target);
 
   // get threads required to steal the profitRatio
