@@ -2,8 +2,10 @@ import {NS} from "@ns";
 import {forEachServer} from "./lib/helpers";
 import {createProgressBar, sortTable, tprintTable} from "./lib/logger";
 
-async function getServerStatus(ns: NS) {
-  const status = new Map<string, string>();
+/** Counts the amount of threads allocated to each stage of the server hacking process (hack, grow, weaken).
+ * This is done for each server that can be hacked. */
+async function getHackThreads(ns: NS) {
+  const status = new Map<string, {hackThreads: number; growThreads: number; weakenThreads: number}>();
   await forEachServer(
     ns,
     (ns, serverName) => {
@@ -13,12 +15,17 @@ async function getServerStatus(ns: NS) {
 
         if (typeof target !== "string") continue;
 
+        // Create an entry in map if it doesnt exist.
+        if (status.get(target) == null) status.set(target, {hackThreads: 0, growThreads: 0, weakenThreads: 0});
+
+        const threads = status.get(target)!;
+
         if (filename === "minRunners/minHack.js") {
-          status.set(target, "Hacking");
-        } else if (filename === "minRunners/minGrow.js" && status.get(target) !== "Hacking") {
-          status.set(target, "Growing");
-        } else if (filename === "minRunners/minWeaken.js" && status.get(target) !== "Hacking" && status.get(target) !== "Growing") {
-          status.set(target, "Weakening");
+          status.set(target, {...threads, hackThreads: threads.hackThreads + script.threads});
+        } else if (filename === "minRunners/minGrow.js") {
+          status.set(target, {...threads, growThreads: threads.growThreads + script.threads});
+        } else if (filename === "minRunners/minWeaken.js") {
+          status.set(target, {...threads, weakenThreads: threads.weakenThreads + script.threads});
         }
       }
     },
@@ -31,8 +38,8 @@ async function getServerStatus(ns: NS) {
 /** Prints a table summary of all unowned servers to the terminal. */
 export async function main(ns: NS) {
   const data: string[][] = [];
-  const tableHeaders = ["Server Name", "status", "Money", "Max Money", "Security", "Root access", "Ports", "RAM", "Hack skill"];
-  const serverStatus = await getServerStatus(ns);
+  const tableHeaders = ["Server Name", "Status", "H", "G", "W", "Money", "Max Money", "Security", "Root Access", "Ports", "RAM", "Hack Skill"];
+  const serversHackThreads = await getHackThreads(ns);
 
   const createRow = (ns: NS, serverName: string) => {
     // server stats.
@@ -45,10 +52,17 @@ export async function main(ns: NS) {
     const moneyBar = createProgressBar((serverMoney / serverMaxMoney) * 100, 20);
     const securityBar = createProgressBar((serverSecurity / serverMaxSecurity) * 100);
 
+    const hackThreads = serversHackThreads.get(serverName)?.hackThreads ?? 0;
+    const growThreads = serversHackThreads.get(serverName)?.growThreads ?? 0;
+    const weakenThreads = serversHackThreads.get(serverName)?.weakenThreads ?? 0;
+
     // assemble the table row for this server.
     const row = [
       serverName,
-      serverStatus.get(serverName) ?? "NA",
+      hackThreads > 0 ? "Hacking" : growThreads > 0 ? "Growing" : weakenThreads > 0 ? "Weakening" : "NA",
+      `${hackThreads}`,
+      `${growThreads}`,
+      `${weakenThreads}`,
       `${moneyBar}`,
       `${ns.formatNumber(ns.getServerMaxMoney(serverName))}`,
       `${securityBar}`,
