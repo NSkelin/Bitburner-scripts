@@ -13,11 +13,11 @@ async function getServerStatus(ns: NS) {
 
         if (typeof target !== "string") continue;
 
-        if (filename === "minHacker.js") {
+        if (filename === "minRunners/minHack.js") {
           status.set(target, "Hacking");
-        } else if (filename === "minGrower.js" && status.get(target) !== "Hacking") {
+        } else if (filename === "minRunners/minGrow.js" && status.get(target) !== "Hacking") {
           status.set(target, "Growing");
-        } else if (filename === "minWeakener.js" && status.get(target) !== "Hacking" && status.get(target) !== "Growing") {
+        } else if (filename === "minRunners/minWeaken.js" && status.get(target) !== "Hacking" && status.get(target) !== "Growing") {
           status.set(target, "Weakening");
         }
       }

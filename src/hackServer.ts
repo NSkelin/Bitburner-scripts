@@ -43,7 +43,7 @@ async function weakenSecurityToMinimum(ns: NS, server: string) {
   }
 
   // Try to start weakener scripts.
-  const scriptPids = await allocateScripts(ns, [{script: "minWeakener.js", threads: threadCount, args: [server]}], allocationOptions);
+  const scriptPids = await allocateScripts(ns, [{script: "minRunners/minWeaken.js", threads: threadCount, args: [server]}], allocationOptions);
   if (scriptPids == null || scriptPids.length === 0) return;
 
   // wait until the servers security is at its minimum.
@@ -66,8 +66,8 @@ async function growMoneyToMaximum(ns: NS, server: string) {
 
   // Try to start grower scripts.
   const scripts = [
-    {script: "minGrower.js", threads: growthThreads, args: [server]},
-    {script: "minWeakener.js", threads: weakenThreads, args: [server]},
+    {script: "minRunners/minGrow.js", threads: growthThreads, args: [server]},
+    {script: "minRunners/minWeaken.js", threads: weakenThreads, args: [server]},
   ];
   const scriptPids = await allocateScripts(ns, scripts, allocationOptions);
   if (scriptPids == null || scriptPids.length === 0) return;
@@ -86,9 +86,9 @@ async function hackTarget(ns: NS, target: string) {
 
   // Try to start hacking scripts.
   const scripts = [
-    {script: "minHacker.js", threads: hackThreads, args: [target]},
-    {script: "minGrower.js", threads: growthThreads, args: [target]},
-    {script: "minWeakener.js", threads: weakenThreads, args: [target]},
+    {script: "minRunners/minHack.js", threads: hackThreads, args: [target]},
+    {script: "minRunners/minGrow.js", threads: growthThreads, args: [target]},
+    {script: "minRunners/minWeaken.js", threads: weakenThreads, args: [target]},
   ];
   await allocateScripts(ns, scripts, {...allocationOptions, executeOptions: {allOrNothing: true}});
 }
