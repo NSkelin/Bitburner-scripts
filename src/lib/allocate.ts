@@ -2,10 +2,15 @@ import {NS} from "@ns";
 import {copyLibScripts, forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
 import {createMutex} from "lib/mutex";
 
-interface Script {
+export interface Script {
+  /** Name of the script to be run. */
   script: string;
+  /** Number of threads to run the script with. */
   threads: number;
+  /** Optional args to run the script with. */
   args?: (string | number | boolean)[];
+  /** Any files to include when copying the script over. */
+  files?: string[];
 }
 
 // create a lock & queue to stop multiple allocations from allocating to the same server and possibly running out of ram.
@@ -60,8 +65,10 @@ async function allocate(ns: NS, allocation: Map<string, Script[]>) {
     // start scripts on their allocated server
     allocation.forEach((scripts, server) => {
       copyLibScripts(ns, server);
-      for (const {script, threads, args = []} of scripts) {
-        ns.scp(script, server);
+      for (const {script, threads, args = [], files = []} of scripts) {
+        // Copy all files needed to run the script over.
+        // Copy and run script.
+        ns.scp([script, ...files], server);
         const pid = ns.exec(script, server, threads, ...args);
 
         if (pid === 0) {
@@ -157,7 +164,7 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
       server.freeRam -= scriptRamCost * scriptThreadsToRun;
 
       // Allocate the script.
-      allocation.get(server.name)!.push({script: script.script, threads: scriptThreadsToRun, args: script.args});
+      allocation.get(server.name)!.push({...script, threads: scriptThreadsToRun});
 
       // if the script had all threads executed, goto the next script, otherwise try adding the remaining threads to another server
       if (script.threads === 0) scriptIndex++;
