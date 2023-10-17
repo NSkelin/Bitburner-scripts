@@ -1,11 +1,14 @@
 import {NS} from "@ns";
-import {allocateScripts} from "./lib/allocate";
+import {Script, allocateScripts} from "./lib/allocate";
 import {forEachServer} from "./lib/helpers";
 
 /** This function will prime a server for hacking by lowering its security to the minimum and
  * growing its available money to the maximum. */
 async function primeServer(ns: NS, server: string) {
-  await allocateScripts(ns, [{script: "hackServer.js", threads: 1, args: [server]}], {
+  const scripts: Script[] = [
+    {script: "hackServer.js", threads: 1, args: [server], files: ["minRunners/minHack.js", "minRunners/minGrow.js", "minRunners/minWeaken.js"]},
+  ];
+  await allocateScripts(ns, scripts, {
     serverOptions: {includeHomeServer: true, includePurchasedServers: true, UnownedServers: {include: false}},
   });
 }
