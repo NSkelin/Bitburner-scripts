@@ -12,10 +12,6 @@ function printPurchaseStatus(ns: NS, cost: number, percent: number) {
   const menuData = [
     ["Servers owned", `${ownedServers} / ${serverLimit}`],
     ["Server cost", `${ns.formatNumber(cost)} / ${ns.formatNumber(realCost)}`],
-    ["", ""],
-    ["Current RAM", "0 GB / 0 GB"],
-    ["Ram double cost", "0 / 0"],
-    ["Servers doubled", "0 / 0"],
   ];
 
   printMenu(ns, "buyServers.js", "Purchasing servers...", menuData);
@@ -31,7 +27,7 @@ function printUpgradeStatus(ns: NS, baseRam: number, maxRam: number, server: str
     ["Server cost", "NA / NA"],
     ["", ""],
     ["Current RAM", `${ns.formatRam(baseRam)} / ${ns.formatRam(maxRam)}`],
-    ["Ram double cost", `${ns.formatNumber(upgradeCost)} / ${ns.formatNumber(investmentSize)}`],
+    ["RAM double cost", `${ns.formatNumber(upgradeCost)} / ${ns.formatNumber(investmentSize)}`],
     ["Servers doubled", `${serverIteration} / ${ns.getPurchasedServers().length}`],
   ];
 
@@ -49,61 +45,95 @@ function getRamDoubleCost(ns: NS, server: string) {
   return ns.getPurchasedServerUpgradeCost(server, maxRam * 2);
 }
 
-/** Upgrades a server to double its current max ram.
+/** Goes through each purchased server one by one and doubles their RAM each time until they all are at the desired RAM amount.
  *
- * Waits until you have 10x the cost of upgrading the server before doubling its ram. */
-async function doubleRam(ns: NS, server: string, costPercent: number) {
-  const maxRam = ns.getServerMaxRam(server);
-  const upgradeCost = getRamDoubleCost(ns, server);
-  while (canAfford(ns, upgradeCost, costPercent) === false) {
-    await ns.sleep(60 * 1000);
-  }
-  ns.upgradePurchasedServer(server, maxRam * 2);
-}
-
-/** Purchases servers until the maximum number of servers possible is reached.
- *
- * If you run out of money, it will wait until you have enough (10x the cost) before continuing to purchase servers. */
-async function purchaseAllServers(ns: NS, hostName: string, startRam: number, costPercent: number) {
-  const availableServersToBuy = getPurchasableServerCount(ns);
-
-  for (let i = 0; i < availableServersToBuy; i++) {
-    const cost = ns.getPurchasedServerCost(startRam);
-    printPurchaseStatus(ns, cost, costPercent);
-    while (canAfford(ns, cost, costPercent) === false) {
-      await ns.sleep(60 * 1000);
-    }
-    ns.purchaseServer(hostName, startRam);
-  }
-}
-
-/** Upgrades all owned server's ram by double each time until the maximum ram is reached on them all.
- *
- * It will upgrade all servers to an equal base before upgrading past it (8gb, 8gb, 8gb, instead of 16gb, 8gb, 4gb).
- * It also waits until you have 10x the required server cost before upgrading.
+ * @param spendPercent Defines the percent of your total money you are willing to spend. ex: upgrade cost: 100, cost percent 0.1 (10%), money required: 1000.
+ * @param desiredRam [Default: Max allowed] The amount of RAM, in GB, to upgrade the server to. Must be a power of 2 and will be capped at the max RAM possible.
  */
-async function upgradeAllServers(ns: NS, costPercent: number, maxRam: number) {
-  maxRam = maxRam ?? ns.getPurchasedServerMaxRam();
-  if (Math.log2(maxRam) % 1 !== 0) throw new Error("Max ram MUST be a multiple of 2");
+async function incrementallyUpgradeServers(ns: NS, spendPercent: number, desiredRam = ns.getPurchasedServerMaxRam()) {
+  // Cap desired RAM to the maximum RAM possible.
+  desiredRam = desiredRam > ns.getPurchasedServerMaxRam() ? ns.getPurchasedServerMaxRam() : desiredRam;
+  // Ensure desiredRam is a power of 2.
+  if (Math.log2(desiredRam) % 1 !== 0) throw new Error("Max RAM MUST be a power of 2.");
 
-  // get the lowest base ram level of all servers
+  // Get the smallest RAM level across all purchased servers.
   let baseRam = 0;
   for (const server of ns.getPurchasedServers()) {
-    const maxRam = ns.getServerMaxRam(server);
-    if (baseRam === 0 || maxRam < baseRam) {
-      baseRam = maxRam;
+    const currentRam = ns.getServerMaxRam(server);
+    if (baseRam === 0 || currentRam < baseRam) {
+      baseRam = currentRam;
     }
   }
 
-  while (baseRam < maxRam) {
+  // Increment each servers RAM.
+  while (baseRam < desiredRam) {
     for (const [i, server] of ns.getPurchasedServers().entries()) {
-      printUpgradeStatus(ns, baseRam, maxRam, server, i, costPercent);
-
-      if (ns.getServerMaxRam(server) === baseRam) {
-        await doubleRam(ns, server, costPercent);
-      }
+      printUpgradeStatus(ns, baseRam, desiredRam, server, i, spendPercent);
+      increaseServerRam(ns, server, baseRam * 2, 0.1);
     }
     baseRam *= 2;
+  }
+}
+
+/** Upgrades a purchased servers RAM to the desired amount. If you do not have enough money it waits until you do.
+ *
+ * @param server The name of the purchased server to increase the RAM of.
+ * @param desiredRam The amount of RAM, in GB, to upgrade the server to. Must be a power of 2 and will be capped at the max RAM possible.
+ * @param spendPercent Defines the percent of your total money you are willing to spend. ex: upgrade cost: 100, cost percent 0.1 (10%), money required: 1000.
+ * @param multiplier [Default: 1] Must be 1 or a power of 2. If 1, the server will be upgraded to the desired RAM all at once,
+ * otherwise it will be multiplied by the multiplier until the desired RAM is reached.
+ */
+async function increaseServerRam(ns: NS, server: string, desiredRam: number, spendPercent: number, multiplier = 1) {
+  // Cap desired RAM to the maximum RAM possible.
+  desiredRam = desiredRam > ns.getPurchasedServerMaxRam() ? ns.getPurchasedServerMaxRam() : desiredRam;
+  // Ensure desiredRam is a power of 2.
+  if (Math.log2(desiredRam) % 1 !== 0) throw new Error("desired RAM MUST be a power of 2.");
+  // Ensure multiplier is 1 or a power of 2.
+  if (multiplier === 1 || Math.log2(multiplier) % 1 !== 0) throw new Error("Multiplier MUST be 1 OR a multiple of 2.");
+
+  while (ns.getServerMaxRam(server) < desiredRam) {
+    const currentRam = ns.getServerMaxRam(server);
+    // set the target RAM to the desired RAM if the multiplier is 1, otherwise multiply the current RAM by the multiplier, capped at the maximum RAM possible.
+    const targetRam =
+      multiplier === 1
+        ? desiredRam
+        : currentRam * multiplier > ns.getPurchasedServerMaxRam()
+        ? ns.getPurchasedServerMaxRam()
+        : currentRam * multiplier;
+
+    const upgradeCost = ns.getPurchasedServerUpgradeCost(server, targetRam);
+
+    // Wait until the upgrade can be bought.
+    while (canAfford(ns, upgradeCost, spendPercent) === false) {
+      await ns.sleep(30 * 1000);
+    }
+
+    ns.upgradePurchasedServer(server, targetRam);
+  }
+}
+
+/** Continuously purchases a new server and upgrades its RAM to the desired amount until the maximum number of servers possible is reached.
+ *
+ * @param hostName Name for the newly purchased server.
+ * @param initialRam The RAM that a new server will be purchased with. Capped at the max RAM possible.
+ * @param desiredRam [Default: 256] The amount of RAM, in GB, to upgrade the server to. Must be a power of 2 and will be capped at the max RAM possible.
+ * @param spendPercent [Default: 1] Defines the percent of your total money you are willing to spend. ex: upgrade cost: 100, cost percent 0.1 (10%), money required: 1000.
+ * @param multiplier [Default: 2] Must be 1 or a power of 2. If 1, the server will be upgraded to the desired RAM all at once,
+ * otherwise it will be multiplied by the multiplier until the desired RAM is reached.
+ */
+async function purchaseAllServers(ns: NS, hostName: string, initialRam: number, spendPercent = 1) {
+  // Cap desired RAM to the maximum RAM possible.
+  initialRam = initialRam > ns.getPurchasedServerMaxRam() ? ns.getPurchasedServerMaxRam() : initialRam;
+
+  // Purchase new servers until cap is reached.
+  while (ns.getPurchasedServers().length < ns.getPurchasedServerLimit()) {
+    const cost = ns.getPurchasedServerCost(initialRam);
+    if (canAfford(ns, cost, spendPercent)) {
+      ns.purchaseServer(hostName, initialRam);
+      printPurchaseStatus(ns, cost, spendPercent);
+    } else {
+      await ns.sleep(30 * 1000);
+    }
   }
 }
 
@@ -111,10 +141,10 @@ async function upgradeAllServers(ns: NS, costPercent: number, maxRam: number) {
 export async function main(ns: NS) {
   ns.disableLog("ALL");
   const newServerHostName = "home-S"; // The base name scheme for new servers. automatically adds digits, ex: home-S-0, home-S-1, etc.
-  const newServerRam = 8; // The amount of ram new servers should be purchased with.
-  const costPercent = 0.1; // The maximum percent of your total money you are willing to pay to purchase / upgrade servers.
-  const maxRam = 16384; // multiples of 2 only.
+  const newServerRam = 64; // The amount of ram new servers should be purchased with.
+  const spendPercent = 0.1; // The maximum percent of your total money you are willing to pay to upgrade servers.
+  const desiredRam = 16384; // multiples of 2 only.
 
-  await purchaseAllServers(ns, newServerHostName, newServerRam, costPercent);
-  await upgradeAllServers(ns, costPercent, maxRam);
+  await purchaseAllServers(ns, newServerHostName, newServerRam);
+  await incrementallyUpgradeServers(ns, spendPercent, desiredRam);
 }
