@@ -128,9 +128,9 @@ async function purchaseAllServers(ns: NS, hostName: string, initialRam: number, 
   // Purchase new servers until cap is reached.
   while (ns.getPurchasedServers().length < ns.getPurchasedServerLimit()) {
     const cost = ns.getPurchasedServerCost(initialRam);
+    printPurchaseStatus(ns, cost, spendPercent);
     if (canAfford(ns, cost, spendPercent)) {
       ns.purchaseServer(hostName, initialRam);
-      printPurchaseStatus(ns, cost, spendPercent);
     } else {
       await ns.sleep(30 * 1000);
     }
