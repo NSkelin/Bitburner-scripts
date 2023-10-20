@@ -69,7 +69,7 @@ async function incrementallyUpgradeServers(ns: NS, spendPercent: number, desired
   while (baseRam < desiredRam) {
     for (const [i, server] of ns.getPurchasedServers().entries()) {
       printUpgradeStatus(ns, baseRam, desiredRam, server, i, spendPercent);
-      increaseServerRam(ns, server, baseRam * 2, 0.1);
+      await increaseServerRam(ns, server, baseRam * 2, 0.1);
     }
     baseRam *= 2;
   }
@@ -89,7 +89,7 @@ async function increaseServerRam(ns: NS, server: string, desiredRam: number, spe
   // Ensure desiredRam is a power of 2.
   if (Math.log2(desiredRam) % 1 !== 0) throw new Error("desired RAM MUST be a power of 2.");
   // Ensure multiplier is 1 or a power of 2.
-  if (multiplier === 1 || Math.log2(multiplier) % 1 !== 0) throw new Error("Multiplier MUST be 1 OR a multiple of 2.");
+  if (multiplier !== 1 && Math.log2(multiplier) % 1 !== 0) throw new Error(`Multiplier MUST be 1 OR a multiple of 2. Was: ${multiplier}`);
 
   while (ns.getServerMaxRam(server) < desiredRam) {
     const currentRam = ns.getServerMaxRam(server);
