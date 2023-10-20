@@ -123,7 +123,7 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
   const {usableServers, totalAvailableRam} = await getUsableServers(ns, scripts, allowThreadSplitting, allocationServerOptions);
 
   // if all the servers combined cant run all the scripts, return
-  if (allOrNothing && totalAvailableRam < totalRequiredRam) return null;
+  if (allOrNothing && totalAvailableRam < totalRequiredRam * 1000) return null;
 
   const allocation: Map<string, Script[]> = new Map();
 
