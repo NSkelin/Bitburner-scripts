@@ -2,44 +2,51 @@ import {NS} from "@ns";
 import {forEachServer} from "./lib/helpers";
 import {createProgressBar, sortTable, tprintTable} from "./lib/logger";
 
-/** Counts the amount of threads allocated to each stage of the server hacking process (hack, grow, weaken).
- * This is done for each server that can be hacked. */
-async function getHackThreads(ns: NS) {
-  const status = new Map<string, {hackThreads: number; growThreads: number; weakenThreads: number}>();
-  await forEachServer(
-    ns,
-    (ns, serverName) => {
-      for (const script of ns.ps(serverName)) {
-        const filename = script.filename;
-        const target = script.args[0];
+/** Returns a summary of the scripts that best represents each targets current hack stage.
+ *
+ * A targets hack stage goes in this order: 1. Hack, 2: Grow, 3: Weaken, 4: Deploying, 5: Null. For each target only the
+ * scripts related to the highest order will be kept.
+ * Example: Target: n00dles. Scripts targeting n00dles: hack.js, weaken.js, deploy.js. Stage: "hack". Saved scripts: hack.js.
+ *
+ * It will search through the "home" and purchased servers for any running scripts that are related to hacking.
+ * Each target will have the most relevant (see above) script and the total thread count for all instances of that script with the same target.
+ */
+async function getHackStage(ns: NS) {
+  const stageMap = new Map<string, {script: string; threads: number}>();
+  // ORDER MATTERS. The lower the index, the higher the stage.
+  const hackingScripts = ["minRunners/minHack.js", "minRunners/minGrow.js", "minRunners/minWeaken.js", "hackServer.js"];
 
-        if (typeof target !== "string") continue;
+  const callBack = (ns: NS, serverName: string) => {
+    for (const {filename, args, threads} of ns.ps(serverName)) {
+      // Incorrect script.
+      if (!hackingScripts.includes(filename)) continue;
+      const target = args[0];
+      // Args[0] cant be a target server name.
+      if (typeof target !== "string") continue;
 
-        // Create an entry in map if it doesnt exist.
-        if (status.get(target) == null) status.set(target, {hackThreads: 0, growThreads: 0, weakenThreads: 0});
+      const {threads: threadCount, script} = stageMap.get(target) ?? {threads: 0, script: null};
 
-        const threads = status.get(target)!;
-
-        if (filename === "minRunners/minHack.js") {
-          status.set(target, {...threads, hackThreads: threads.hackThreads + script.threads});
-        } else if (filename === "minRunners/minGrow.js") {
-          status.set(target, {...threads, growThreads: threads.growThreads + script.threads});
-        } else if (filename === "minRunners/minWeaken.js") {
-          status.set(target, {...threads, weakenThreads: threads.weakenThreads + script.threads});
-        }
+      // Create a new stage for targets not in the map yet / higher order stage found.
+      if (script == null || hackingScripts.indexOf(filename) < hackingScripts.indexOf(script)) {
+        stageMap.set(target, {script: filename, threads: threads});
+      } else if (filename === script) {
+        // Update thread count.
+        stageMap.set(target, {script: filename, threads: threads + threadCount});
       }
-    },
-    {includeHomeServer: true, includePurchasedServers: true}
-  );
+    }
+  };
 
-  return status;
+  // Get each servers hack status.
+  await forEachServer(ns, callBack, {includeHomeServer: true, includePurchasedServers: true});
+
+  return stageMap;
 }
 
 /** Prints a table summary of all unowned servers to the terminal. */
 export async function main(ns: NS) {
   const data: string[][] = [];
-  const tableHeaders = ["Server Name", "Status", "H", "G", "W", "Money", "Max Money", "Security", "Root Access", "Ports", "RAM", "Hack Skill"];
-  const serversHackThreads = await getHackThreads(ns);
+  const tableHeaders = ["Server Name", "Status", "Threads", "Money", "Max Money", "Security", "Root Access", "Ports", "RAM", "Hack Skill"];
+  const hackStages = await getHackStage(ns);
 
   const createRow = (ns: NS, serverName: string) => {
     // server stats.
@@ -51,18 +58,21 @@ export async function main(ns: NS) {
     // create progress bars for easier table visuals.
     const moneyBar = createProgressBar((serverMoney / serverMaxMoney) * 100, 20);
     const securityBar = createProgressBar((serverSecurity / serverMaxSecurity) * 100);
-
-    const hackThreads = serversHackThreads.get(serverName)?.hackThreads ?? 0;
-    const growThreads = serversHackThreads.get(serverName)?.growThreads ?? 0;
-    const weakenThreads = serversHackThreads.get(serverName)?.weakenThreads ?? 0;
+    const stage = hackStages.get(serverName)?.script;
 
     // assemble the table row for this server.
     const row = [
       serverName,
-      hackThreads > 0 ? "Hacking" : growThreads > 0 ? "Growing" : weakenThreads > 0 ? "Weakening" : "NA",
-      `${hackThreads}`,
-      `${growThreads}`,
-      `${weakenThreads}`,
+      stage === "hackServer.js"
+        ? "Deploying"
+        : stage === "minRunners/minHack.js"
+        ? "Hacking"
+        : stage === "minRunners/minGrow.js"
+        ? "Growing"
+        : stage === "minRunners/minWeaken.js"
+        ? "Weakening"
+        : "NA",
+      `${hackStages.get(serverName)?.threads ?? 0}`,
       `${moneyBar}`,
       `${ns.formatNumber(ns.getServerMaxMoney(serverName))}`,
       `${securityBar}`,
