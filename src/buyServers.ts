@@ -145,6 +145,11 @@ export async function main(ns: NS) {
   const spendPercent = 0.1; // The maximum percent of your total money you are willing to pay to upgrade servers.
   const desiredRam = 16384; // multiples of 2 only.
 
+  // Open window to track status.
+  ns.tail();
+  ns.moveTail(1230, 0);
+  ns.resizeTail(460, 310);
+
   await purchaseAllServers(ns, newServerHostName, newServerRam);
   await incrementallyUpgradeServers(ns, spendPercent, desiredRam);
 }
