@@ -1,5 +1,5 @@
 import {NS} from "@ns";
-import {copyLibScripts, forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
+import {forEachServer, forEachServerOptions, getServerFreeRam} from "lib/helpers";
 import {createMutex} from "lib/mutex";
 
 export interface Script {
@@ -57,34 +57,6 @@ async function getUsableServers(
   return {usableServers, totalAvailableRam};
 }
 
-/** Runs the allocated scripts onto their allocated servers and returns the scripts pid and the server its running on, or null if it failed to allocated any scripts. */
-async function allocate(ns: NS, allocation: Map<string, Script[]>) {
-  if (allocation.size > 0) {
-    const executedServers: {server: string; pid: number}[] = [];
-
-    // start scripts on their allocated server
-    allocation.forEach((scripts, server) => {
-      copyLibScripts(ns, server);
-      for (const {script, threads, args = [], files = []} of scripts) {
-        // Copy all files needed to run the script over.
-        // Copy and run script.
-        ns.scp([script, ...files], server);
-        const pid = ns.exec(script, server, threads, ...args);
-
-        if (pid === 0) {
-          ns.tprint(`WARN Failed to allocate script: ${script}, threads: ${threads}`);
-        } else {
-          executedServers.push({server, pid});
-        }
-      }
-    });
-
-    return executedServers;
-  } else {
-    return null;
-  }
-}
-
 /** Options used for controlling how the scripts can be run. */
 interface ExecuteOptions {
   /** If true, the scripts will only run if there is enough ram to run them all, otherwise no scripts will run. */
@@ -101,7 +73,7 @@ export interface AllocateScriptsOptions {
   serverOptions?: Omit<forEachServerOptions, "rootAccessOnly">;
   executeOptions?: ExecuteOptions;
 }
-/** Automatically allocates scripts across multiple servers memory */
+
 export async function allocateScripts(ns: NS, scripts: Script[], options?: AllocateScriptsOptions) {
   const unlock = await mutex.lock();
   // setup forEachServer() options
@@ -115,7 +87,6 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
 
   // setup allocation options
   const allOrNothing = options?.executeOptions?.allOrNothing ?? false;
-  const sameServer = options?.executeOptions?.sameServer ?? false;
   const allowThreadSplitting = options?.executeOptions?.allowThreadSplitting ?? false;
 
   // get script & server information
@@ -123,69 +94,78 @@ export async function allocateScripts(ns: NS, scripts: Script[], options?: Alloc
   const {usableServers, totalAvailableRam} = await getUsableServers(ns, scripts, allowThreadSplitting, allocationServerOptions);
 
   // if all the servers combined cant run all the scripts, return
-  if (allOrNothing && totalAvailableRam < totalRequiredRam * 1000) {
+  if ((allOrNothing && totalAvailableRam < totalRequiredRam * 1000) || (allOrNothing && !canRunScripts(ns, scripts, usableServers))) {
     unlock();
     return null;
   }
 
-  const allocation: Map<string, Script[]> = new Map();
+  const allocations: {script: string; pids: number[]}[] = [];
+  for (const {script, threads, args, files} of scripts) {
+    const pids = runScript(
+      ns,
+      script,
+      threads,
+      usableServers.map(({name}) => name),
+      files,
+      args,
+      allowThreadSplitting
+    );
+    if (pids) allocations.push({script, pids});
+  }
 
-  // find a solution to allocate scripts
-  findAllocation(0);
-  const allocatedScripts = allocate(ns, allocation);
   unlock();
-  return allocatedScripts;
+  return allocations;
+}
 
-  function findAllocation(scriptIndex: number) {
-    if (scriptIndex === scripts.length) {
-      // All scripts have been allocated
-      return true;
-    }
+function canRunScripts(ns: NS, scripts: {script: string; threads: number}[], servers: {name: string; freeRam: number}[]) {
+  // eslint-disable-next-line prefer-const
+  for (let {script, threads} of scripts) {
+    const scriptRamCost = ns.getScriptRam(script);
 
-    const script = scripts[scriptIndex];
-    const scriptRamCost = ns.getScriptRam(script.script) * 1000;
+    for (let {freeRam} of servers) {
+      if (scriptRamCost <= freeRam) {
+        const maxThreads = Math.floor(freeRam / scriptRamCost);
 
-    for (const server of usableServers) {
-      const serverMaxThreads = Math.floor(server.freeRam / scriptRamCost);
-      const serverCanRunWholeScript = serverMaxThreads >= script.threads;
-
-      // Server cant run all the scripts, try another.
-      if (sameServer && server.freeRam < totalRequiredRam) continue;
-      // Server cant run the whole script and the script cant be split across multiple servers
-      else if (serverCanRunWholeScript === false && allowThreadSplitting === false) continue;
-      // Server doesnt have enough ram to run a single thread
-      else if (server.freeRam < scriptRamCost) continue;
-
-      // Add the server to the allocation.
-      if (!allocation.has(server.name)) {
-        allocation.set(server.name, []);
-      }
-
-      const scriptThreadsToRun = serverMaxThreads > script.threads ? script.threads : serverMaxThreads;
-      // Update server ram and remaining script threads to run.
-      script.threads -= scriptThreadsToRun;
-      server.freeRam -= scriptRamCost * scriptThreadsToRun;
-
-      // Allocate the script.
-      allocation.get(server.name)!.push({...script, threads: scriptThreadsToRun});
-
-      // if the script had all threads executed, goto the next script, otherwise try adding the remaining threads to another server
-      if (script.threads === 0) scriptIndex++;
-
-      // Scripts successfully allocated, return true
-      if (findAllocation(scriptIndex)) return true;
-
-      // Scripts failed to fully allocate, remove the allocated script
-      allocation.get(server.name)!.pop();
-      script.threads += scriptThreadsToRun;
-      server.freeRam += scriptRamCost * scriptThreadsToRun;
-
-      // Remove server from the allocation
-      if (allocation.get(server.name)?.length === 0) {
-        allocation.delete(server.name);
+        // Clamp thread count to remaining threads.
+        const scriptThreads = maxThreads > threads ? threads : maxThreads;
+        threads -= scriptThreads;
+        freeRam = freeRam - scriptThreads * scriptRamCost;
+        if (threads === 0) break;
       }
     }
-    // No servers can support the script
+    if (threads === 0) break;
     return false;
   }
+  return true;
+}
+
+function runScript(
+  ns: NS,
+  script: string,
+  threads: number,
+  servers: string[],
+  dependencies: string[] = [],
+  args: (string | number | boolean)[] = [],
+  allowThreadSplitting = true
+) {
+  const pids: number[] = [];
+  const scriptRamCost = ns.getScriptRam(script);
+
+  for (const server of servers) {
+    const serverFreeRam = getServerFreeRam(ns, server) / 1000;
+
+    if (serverFreeRam < scriptRamCost * threads && allowThreadSplitting === false) continue;
+    else if (scriptRamCost <= serverFreeRam) {
+      const maxThreads = Math.floor(serverFreeRam / scriptRamCost);
+
+      // Clamp thread count to remaining threads.
+      const scriptThreads = maxThreads > threads ? threads : maxThreads;
+
+      ns.scp([script, ...dependencies, ...ns.ls("home", "lib")], server, "home");
+      pids.push(ns.exec(script, server, scriptThreads, ...args));
+      threads -= scriptThreads;
+      if (threads === 0) return;
+    }
+  }
+  return pids;
 }
