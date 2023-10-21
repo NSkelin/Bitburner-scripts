@@ -1,6 +1,7 @@
 import {NS} from "@ns";
 import {AllocateScriptsOptions, allocateScripts} from "./lib/allocate";
 import {getOptimalHackingThreads, serverMoneyAtMax, serverSecurityAtMinimum} from "./lib/hackerUtils";
+import {printMenu} from "./lib/logger";
 
 const allocationOptions: AllocateScriptsOptions = {
   executeOptions: {
@@ -14,14 +15,22 @@ const allocationOptions: AllocateScriptsOptions = {
   },
 };
 
-/** Waits for a given condition to return true before then stops all the given scripts. */
-async function stopScriptsAfterCondition(ns: NS, condition: () => boolean, scripts: {pid: number; server: string}[]) {
-  while (condition() === false) {
-    await ns.sleep(5000);
-  }
+function printScriptStatus(ns: NS, status: string, timeLeft: number) {
+  const menuData = [
+    ["Status", `${status}`],
+    ["Time left", `${timeLeft}`],
+    ["Hack Profit", ``],
+    ["Security level", `2 / 1`],
+  ];
 
-  for (const {pid} of scripts) {
-    ns.kill(pid);
+  printMenu(ns, "HackServer.js", "Hacking server...", menuData);
+}
+
+async function countDown(ns: NS, time: number, interval = 300, callBack?: (ns: NS, timeLeft: number) => void) {
+  while (time > 0) {
+    await ns.sleep(interval);
+    time -= interval;
+    if (callBack) callBack(ns, time);
   }
 }
 
@@ -43,11 +52,8 @@ async function weakenSecurityToMinimum(ns: NS, server: string) {
   }
 
   // Try to start weakener scripts.
-  const scriptPids = await allocateScripts(ns, [{script: "minRunners/minWeaken.js", threads: threadCount, args: [server]}], allocationOptions);
+  const scriptPids = await allocateScripts(ns, [{script: "minRunners/minWeaken.js", threads: threadCount, args: [server, false]}], allocationOptions);
   if (scriptPids == null || scriptPids.length === 0) return;
-
-  // wait until the servers security is at its minimum.
-  await stopScriptsAfterCondition(ns, () => serverSecurityAtMinimum(ns, server), scriptPids);
 }
 
 /** Grows the target servers money to its maximum possible amount while keeping the security to a minimum.
@@ -57,54 +63,64 @@ async function weakenSecurityToMinimum(ns: NS, server: string) {
  * @param server The server to grow money on.
  */
 async function growMoneyToMaximum(ns: NS, server: string) {
-  // server money already max, exit early.
+  // Server money already max, exit early.
   if (serverMoneyAtMax(ns, server) === true) return;
 
-  // get thread count needed to grow money by 10%.
-  const {growthThreads, weakenThreads} = getOptimalHackingThreads(ns, server, 0.1);
-  if (growthThreads === 0 || weakenThreads === 0) return;
+  // Get growth threads.
+  const maxMoney = ns.getServerMaxMoney(server);
+  const money = ns.getServerMoneyAvailable(server);
+  const multiplier = maxMoney / money;
+  const growthThreads = Math.ceil(ns.growthAnalyze(server, multiplier));
 
   // Try to start grower scripts.
-  const scripts = [
-    {script: "minRunners/minGrow.js", threads: growthThreads, args: [server]},
-    {script: "minRunners/minWeaken.js", threads: weakenThreads, args: [server]},
-  ];
+  const scripts = [{script: "minRunners/minGrow.js", threads: growthThreads, args: [server, false]}];
   const scriptPids = await allocateScripts(ns, scripts, allocationOptions);
   if (scriptPids == null || scriptPids.length === 0) return;
-
-  // wait until the servers money is at its maximum.
-  await stopScriptsAfterCondition(ns, () => serverMoneyAtMax(ns, server), scriptPids);
 }
 
 /** Continously hacks the target server for 10% of its money while maintaining its money at maximum and security at minimum.
  * @param target The server to be hacked.
  */
 async function hackTarget(ns: NS, target: string) {
-  // get thread count needed to maintain hack.
-  const {hackThreads, growthThreads, weakenThreads} = getOptimalHackingThreads(ns, target, 0.1);
-  if (hackThreads === 0 || growthThreads === 0 || weakenThreads === 0) return;
+  const {hackThreads} = getOptimalHackingThreads(ns, target, 0.2);
+  if (hackThreads === 0) return;
 
   // Try to start hacking scripts.
-  const scripts = [
-    {script: "minRunners/minHack.js", threads: hackThreads, args: [target]},
-    {script: "minRunners/minGrow.js", threads: growthThreads, args: [target]},
-    {script: "minRunners/minWeaken.js", threads: weakenThreads, args: [target]},
-  ];
-  await allocateScripts(ns, scripts, {...allocationOptions, executeOptions: {allOrNothing: true}});
+  const scripts = [{script: "minRunners/minHack.js", threads: hackThreads, args: [target, false]}];
+  const scriptPids = await allocateScripts(ns, scripts, {...allocationOptions, executeOptions: {allOrNothing: true}});
+  if (scriptPids == null || scriptPids.length === 0) return;
 }
 
-/** Primes a server for hacking by lowering its security to the minimum and
- * growing its available money to the maximum.
- * @param server The server to prime for hacking.
- */
-async function primeServer(ns: NS, server: string) {
-  await weakenSecurityToMinimum(ns, server);
-  await growMoneyToMaximum(ns, server);
-  await weakenSecurityToMinimum(ns, server); // redo to ensure security is minimum.
+async function primeServer(ns: NS, target: string) {
+  while (true) {
+    const security = ns.getServerSecurityLevel(target);
+    const minSec = ns.getServerMinSecurityLevel(target);
+    const money = ns.getServerMoneyAvailable(target);
+    const maxMoney = ns.getServerMaxMoney(target);
+
+    const maxTime = 20 * 60 * 1000; // 20 minutes
+    if ((ns.getWeakenTime(target) > maxTime, ns.getGrowTime(target) > maxTime, ns.getGrowTime(target) > maxTime)) return;
+    else if (ns.getServerMaxMoney(target) === 0) return;
+
+    if (security > minSec) {
+      await weakenSecurityToMinimum(ns, target);
+      await countDown(ns, ns.getWeakenTime(target), 300, (ns, timeLeft) => printScriptStatus(ns, "Weakening", timeLeft));
+    } else if (money < maxMoney) {
+      await growMoneyToMaximum(ns, target);
+      await countDown(ns, ns.getGrowTime(target), 300, (ns, timeLeft) => printScriptStatus(ns, "Growing", timeLeft));
+    } else {
+      await hackTarget(ns, target);
+      await countDown(ns, ns.getHackTime(target), 300, (ns, timeLeft) => printScriptStatus(ns, "Hacking", timeLeft));
+    }
+
+    // Safety wait.
+    await ns.sleep(500);
+  }
 }
 
 /** Prepares a server for hacking, then hacks it. */
 export async function main(ns: NS) {
+  ns.disableLog("ALL");
   const server = ns.args[0];
 
   if (typeof server !== "string") {
@@ -112,6 +128,7 @@ export async function main(ns: NS) {
     return;
   }
 
+  // printScriptStatus(ns);
   await primeServer(ns, server);
   await hackTarget(ns, server);
 }
